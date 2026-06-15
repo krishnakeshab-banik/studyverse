@@ -30,7 +30,7 @@ export default function HomePage() {
             {/* CTA button centered below the hero text */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="mt-64 pointer-events-auto">
-                    <HoverButton onClick={() => router.push('/onboarding')}>Get Started</HoverButton>
+                    <HoverButton onClick={() => router.push('/auth')}>Get Started</HoverButton>
                 </div>
             </div>
         </main>
