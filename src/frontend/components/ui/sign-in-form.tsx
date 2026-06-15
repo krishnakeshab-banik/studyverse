@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent } from "@/components/ui/card"
 import { Mail, Lock } from "lucide-react"
-import { auth } from "@/lib/firebase"
+import { auth } from "@/backend/db/firebase"
 import { 
   signInWithEmailAndPassword, 
   GoogleAuthProvider, 

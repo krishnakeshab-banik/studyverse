@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent } from "@/components/ui/card"
 import { Mail, Lock, User } from "lucide-react"
-import { auth } from "@/lib/firebase"
+import { auth, db } from "@/backend/db/firebase"
+import { doc, setDoc } from "firebase/firestore"
 import { 
   createUserWithEmailAndPassword, 
   GoogleAuthProvider, 
@@ -49,6 +50,20 @@ export default function SignUpForm({ onSwitchMode, onSuccess }: SignUpFormProps)
       if (userCredential.user) {
         await updateProfile(userCredential.user, {
           displayName: name
+        })
+
+        // Save extra data to Firestore
+        await setDoc(doc(db, "users", userCredential.user.uid), {
+          name,
+          email,
+          college: "",
+          year: "",
+          major: "",
+          bio: "",
+          phone: "",
+          emailVerified: false,
+          phoneVerified: false,
+          createdAt: new Date().toISOString()
         })
       }
 

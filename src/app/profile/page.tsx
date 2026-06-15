@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import Link from "next/link"
@@ -8,11 +8,15 @@ import { cn } from "@/lib/utils"
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar"
 import {
   BookOpen, Brain, ShoppingBag, CalendarDays, MessageSquare,
-  User, LogOut, Camera, CheckCircle2, AlertCircle,
+  UserIcon, LogOut, Camera, CheckCircle2, AlertCircle,
   Eye, EyeOff, Save, Pencil, X, Shield, Mail, Phone, GraduationCap,
   ChevronDown, ChevronUp,
   Activity
 } from "lucide-react"
+import { useAuth } from "@/context/AuthContext"
+import { auth, db } from "@/backend/db/firebase"
+import { doc, getDoc, updateDoc } from "firebase/firestore"
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateProfile, signOut } from "firebase/auth"
 
 // ─── Sidebar logo ─────────────────────────────────────────────
 const Logo = () => (
@@ -94,27 +98,88 @@ const Section = ({ title, icon: Icon, children }: { title: string; icon?: React.
   </div>
 )
 
-// ─── Profile page ──────────────────────────────────────────
 export default function ProfilePage() {
   const router = useRouter()
+  const { user } = useAuth()
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState(false)
   const [showPwd, setShowPwd] = useState(false)
   const [pwdVis, setPwdVis] = useState({ current: false, new: false, confirm: false })
   const [passwords, setPasswords] = useState({ current: "", new: "", confirm: "" })
+  const [pwdError, setPwdError] = useState("")
 
   const [profile, setProfile] = useState<ProfileData>({
-    name: "Alex Johnson", college: "Indian Institute of Technology, Delhi",
-    email: "alex.johnson@gmail.com", emailVerified: true,
-    phone: "+91 98765 43210", phoneVerified: false,
-    year: "3rd Year", major: "Computer Science",
-    bio: "Passionate about learning and building. Currently exploring machine learning and full-stack development.",
+    name: "Loading...", college: "Loading...",
+    email: "loading@email.com", emailVerified: false,
+    phone: "", phoneVerified: false,
+    year: "", major: "",
+    bio: "",
   })
   const [draft, setDraft] = useState<ProfileData>(profile)
 
-  const initials = profile.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
+  useEffect(() => {
+    async function loadProfile() {
+      if (user) {
+        const docRef = doc(db, "users", user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data() as ProfileData;
+          data.email = user.email || data.email;
+          data.emailVerified = user.emailVerified;
+          setProfile(data);
+          setDraft(data);
+          
+          if (!data.college || !data.major || !data.year) {
+            setEditing(true);
+          }
+        }
+      }
+    }
+    loadProfile();
+  }, [user]);
 
-  const handleSave = () => { setProfile(draft); setEditing(false) }
+  const initials = profile.name === "Loading..." ? ".." : profile.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
+
+  const handleSave = async () => {
+    if (!user) return;
+    try {
+      const docRef = doc(db, "users", user.uid);
+      await updateDoc(docRef, {
+        name: draft.name,
+        college: draft.college,
+        year: draft.year,
+        major: draft.major,
+        bio: draft.bio,
+        phone: draft.phone
+      });
+      await updateProfile(user, { displayName: draft.name });
+      setProfile(draft); 
+      setEditing(false);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to save profile");
+    }
+  }
+
+  const handleUpdatePassword = async () => {
+    setPwdError("");
+    if (!user || !user.email) return;
+    if (passwords.new !== passwords.confirm) {
+      setPwdError("New passwords do not match");
+      return;
+    }
+    try {
+      const credential = EmailAuthProvider.credential(user.email, passwords.current);
+      await reauthenticateWithCredential(user, credential);
+      await updatePassword(user, passwords.new);
+      alert("Password updated successfully!");
+      setPasswords({ current: "", new: "", confirm: "" });
+      setShowPwd(false);
+    } catch (e: any) {
+      setPwdError(e.message || "Failed to update password");
+    }
+  }
+
   const handleCancel = () => { setDraft(profile); setEditing(false) }
 
   return (
@@ -146,7 +211,7 @@ export default function ProfilePage() {
               className="bg-white/[0.06] rounded-lg px-2"
             />
             <SidebarLink
-              link={{ label: "Logout", href: "/",
+              link={{ label: "Logout", href: "/", onClick: async () => { await signOut(auth); },
                 icon: <LogOut size={22} className="text-red-400 flex-shrink-0 ml-0.5" /> }}
               className="hover:bg-red-500/10 rounded-lg px-2 transition-colors"
             />
@@ -213,9 +278,9 @@ export default function ProfilePage() {
 
           <div className="flex flex-col gap-4">
             {/* Personal Info */}
-            <Section title="Personal Information" icon={User}>
+            <Section title="Personal Information" icon={UserIcon}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Field label="Full Name" value={editing ? draft.name : profile.name} editing={editing} onChange={v => setDraft(d => ({ ...d, name: v }))} placeholder="Your full name" icon={User} />
+                <Field label="Full Name" value={editing ? draft.name : profile.name} editing={editing} onChange={v => setDraft(d => ({ ...d, name: v }))} placeholder="Your full name" icon={UserIcon} />
                 <Field label="University / College" value={editing ? draft.college : profile.college} editing={editing} onChange={v => setDraft(d => ({ ...d, college: v }))} placeholder="Your institution" icon={GraduationCap} />
                 <Field label="Year of Study" value={editing ? draft.year : profile.year} editing={editing} onChange={v => setDraft(d => ({ ...d, year: v }))} placeholder="e.g. 3rd Year" />
                 <Field label="Field of Study" value={editing ? draft.major : profile.major} editing={editing} onChange={v => setDraft(d => ({ ...d, major: v }))} placeholder="e.g. Computer Science" />
@@ -267,7 +332,8 @@ export default function ProfilePage() {
                       </div>
                     </div>
                   ))}
-                  <button className="self-start flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-semibold text-white mt-1"
+                  {pwdError && <p className="text-red-400 text-xs font-medium">{pwdError}</p>}
+                  <button onClick={handleUpdatePassword} className="self-start flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-semibold text-white mt-1"
                     style={{ background: "linear-gradient(to right,#4f46e5,#7c3aed)", boxShadow: "0 0 16px rgba(99,102,241,0.25)" }}>
                     <Shield size={13} /> Update Password
                   </button>
