@@ -21,7 +21,7 @@ import {
   ChevronDown, ChevronUp, LogOut, ExternalLink, type LucideIcon,
 } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
-import { auth, db } from "@/backend/db/firebase"
+import { getClientAuth, getClientDb } from "@/backend/db/firebase"
 import { doc, getDoc, updateDoc } from "firebase/firestore"
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateProfile, signOut } from "firebase/auth"
 
@@ -118,7 +118,7 @@ export default function ProfilePage() {
       if (!user) return
       const id = await ensureStudyverseId(user.uid).catch(() => "")
       if (id) setStudyverseId(id)
-      const docRef = doc(db, "users", user.uid)
+      const docRef = doc(getClientDb(), "users", user.uid)
       const docSnap = await getDoc(docRef)
       if (docSnap.exists()) {
         const data = docSnap.data()
@@ -160,7 +160,7 @@ export default function ProfilePage() {
   const handleSave = async () => {
     if (!user) return
     try {
-      await updateDoc(doc(db, "users", user.uid), {
+      await updateDoc(doc(getClientDb(), "users", user.uid), {
         name: draft.name, college: draft.college, year: draft.year,
         major: draft.major, bio: draft.bio, phone: draft.phone,
       })
@@ -451,7 +451,7 @@ export default function ProfilePage() {
               <p className="text-xs text-gray-500 mt-0.5">You can always sign back in at any time.</p>
             </div>
             <button
-              onClick={async () => { await signOut(auth); router.push("/") }}
+              onClick={async () => { await signOut(getClientAuth()); router.push("/") }}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-red-400 border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 transition-all"
             >
               <LogOut size={14} /> Sign Out

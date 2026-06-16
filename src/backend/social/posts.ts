@@ -2,7 +2,7 @@ import {
   collection, doc, getDoc, getDocs, setDoc, updateDoc,
   query, where, orderBy, arrayUnion, arrayRemove, increment,
 } from "firebase/firestore"
-import { db } from "@/backend/db/firebase"
+import { getClientDb } from "@/backend/db/firebase"
 import type { PostCategory, SVPost } from "./types"
 
 function parsePost(id: string, data: Record<string, unknown>): SVPost {
@@ -49,36 +49,36 @@ export async function createPost(
     likedBy: [],
     timestamp: Date.now(),
   }
-  await setDoc(doc(db, "posts", id), post)
+  await setDoc(doc(getClientDb(), "posts", id), post)
   return post
 }
 
 export async function fetchAllPosts(): Promise<SVPost[]> {
-  const snap = await getDocs(query(collection(db, "posts"), orderBy("timestamp", "desc")))
+  const snap = await getDocs(query(collection(getClientDb(), "posts"), orderBy("timestamp", "desc")))
   return snap.docs.map(d => parsePost(d.id, d.data()))
 }
 
 export async function fetchPostsByUid(uid: string): Promise<SVPost[]> {
-  const q = query(collection(db, "posts"), where("authorUid", "==", uid))
+  const q = query(collection(getClientDb(), "posts"), where("authorUid", "==", uid))
   const snap = await getDocs(q)
   return snap.docs.map(d => parsePost(d.id, d.data())).sort((a, b) => b.timestamp - a.timestamp)
 }
 
 export async function fetchPostsByStudyverseId(studyverseId: string): Promise<SVPost[]> {
   const normalized = studyverseId.trim().toUpperCase()
-  const q = query(collection(db, "posts"), where("studyverseId", "==", normalized))
+  const q = query(collection(getClientDb(), "posts"), where("studyverseId", "==", normalized))
   const snap = await getDocs(q)
   return snap.docs.map(d => parsePost(d.id, d.data())).sort((a, b) => b.timestamp - a.timestamp)
 }
 
 export async function fetchPostsByCategory(category: PostCategory): Promise<SVPost[]> {
-  const q = query(collection(db, "posts"), where("category", "==", category))
+  const q = query(collection(getClientDb(), "posts"), where("category", "==", category))
   const snap = await getDocs(q)
   return snap.docs.map(d => parsePost(d.id, d.data())).sort((a, b) => b.timestamp - a.timestamp)
 }
 
 export async function togglePostLike(postId: string, uid: string): Promise<void> {
-  const ref = doc(db, "posts", postId)
+  const ref = doc(getClientDb(), "posts", postId)
   const snap = await getDoc(ref)
   if (!snap.exists()) return
   const likedBy = (snap.data().likedBy as string[]) || []
@@ -90,7 +90,7 @@ export async function togglePostLike(postId: string, uid: string): Promise<void>
 }
 
 export async function countPostsByUid(uid: string): Promise<number> {
-  const q = query(collection(db, "posts"), where("authorUid", "==", uid))
+  const q = query(collection(getClientDb(), "posts"), where("authorUid", "==", uid))
   const snap = await getDocs(q)
   return snap.size
 }

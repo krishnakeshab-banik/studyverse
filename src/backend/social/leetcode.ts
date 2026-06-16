@@ -1,5 +1,5 @@
 import { doc, updateDoc } from "firebase/firestore"
-import { db } from "@/backend/db/firebase"
+import { getClientDb } from "@/backend/db/firebase"
 import type { LeetCodeProblem, LeetCodeStats } from "./types"
 
 function parseUsername(input: string): string {
@@ -74,7 +74,7 @@ export async function fetchLeetCodeStats(rawUsername: string): Promise<LeetCodeS
 
 export async function syncLeetCodeToUser(uid: string, rawUsername: string): Promise<LeetCodeStats> {
   const stats = await fetchLeetCodeStats(rawUsername)
-  await updateDoc(doc(db, "users", uid), {
+  await updateDoc(doc(getClientDb(), "users", uid), {
     leetcodeUsername: stats.username,
     leetcodeStats: stats,
     leetcodeSyncedAt: Date.now(),

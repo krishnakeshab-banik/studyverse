@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { Camera, User, GraduationCap, Phone, BookOpen, ChevronRight, Check, Pencil, type LucideIcon } from "lucide-react"
-import { auth, db, storage } from "@/backend/db/firebase"
+import { getClientDb, getClientStorage } from "@/backend/db/firebase"
 import { doc, updateDoc } from "firebase/firestore"
 import { updateProfile } from "firebase/auth"
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage"
@@ -61,12 +61,12 @@ export default function SetupProfilePage() {
     try {
       let photoURL = user.photoURL || ""
       if (photoFile) {
-        const ref = storageRef(storage, `avatars/${user.uid}`)
+        const ref = storageRef(getClientStorage(), `avatars/${user.uid}`)
         await uploadBytes(ref, photoFile)
         photoURL = await getDownloadURL(ref)
       }
       await updateProfile(user, { displayName: form.name || user.displayName, photoURL: photoURL || user.photoURL || "" })
-      await updateDoc(doc(db, "users", user.uid), {
+      await updateDoc(doc(getClientDb(), "users", user.uid), {
         name: form.name, phone: form.phone, college: form.college,
         year: form.year, major: form.major, bio: form.bio,
         photoURL, profileComplete: true, updatedAt: new Date().toISOString(),

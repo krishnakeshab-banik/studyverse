@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent } from "@/components/ui/card"
 import { Mail, Lock } from "lucide-react"
-import { auth } from "@/backend/db/firebase"
+import { getClientAuth } from "@/backend/db/firebase"
 import { 
   signInWithEmailAndPassword, 
   GoogleAuthProvider, 
@@ -33,7 +33,7 @@ export default function SignInForm({ onSwitchMode }: SignInFormProps) {
     setIsLoading(true)
 
     try {
-      await signInWithEmailAndPassword(auth, email, password)
+      await signInWithEmailAndPassword(getClientAuth(), email, password)
       router.push("/profile") // Redirect on success
     } catch (err: any) {
       setError(err.message || "Failed to sign in")
@@ -46,7 +46,7 @@ export default function SignInForm({ onSwitchMode }: SignInFormProps) {
     setError(null)
     try {
       const provider = new GoogleAuthProvider()
-      await signInWithPopup(auth, provider)
+      await signInWithPopup(getClientAuth(), provider)
       router.push("/profile")
     } catch (err: any) {
       if (err.code !== "auth/popup-closed-by-user") {
@@ -59,7 +59,7 @@ export default function SignInForm({ onSwitchMode }: SignInFormProps) {
     setError(null)
     try {
       const provider = new GithubAuthProvider()
-      await signInWithPopup(auth, provider)
+      await signInWithPopup(getClientAuth(), provider)
       router.push("/profile")
     } catch (err: any) {
       if (err.code !== "auth/popup-closed-by-user") {

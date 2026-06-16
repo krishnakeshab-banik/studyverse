@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react"
 import { onAuthStateChanged, User } from "firebase/auth"
-import { auth } from "@/backend/db/firebase"
+import { getClientAuth } from "@/backend/db/firebase"
 
 interface AuthContextValue {
   user: User | null
@@ -16,10 +16,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, u => {
+    let unsub = () => {}
+    try {
+      unsub = onAuthStateChanged(getClientAuth(), u => {
       setUser(u)
       setLoading(false)
-    })
+      })
+    } catch {
+      setLoading(false)
+    }
     return unsub
   }, [])
 

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent } from "@/components/ui/card"
 import { Mail, Lock, User } from "lucide-react"
-import { auth, db } from "@/backend/db/firebase"
+import { getClientAuth, getClientDb } from "@/backend/db/firebase"
 import { doc, setDoc } from "firebase/firestore"
 import { 
   createUserWithEmailAndPassword, 
@@ -44,7 +44,7 @@ export default function SignUpForm({ onSwitchMode, onSuccess }: SignUpFormProps)
     setIsLoading(true)
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      const userCredential = await createUserWithEmailAndPassword(getClientAuth(), email, password)
       
       // Update the user's display name
       if (userCredential.user) {
@@ -53,7 +53,7 @@ export default function SignUpForm({ onSwitchMode, onSuccess }: SignUpFormProps)
         })
 
         // Save extra data to Firestore
-        await setDoc(doc(db, "users", userCredential.user.uid), {
+        await setDoc(doc(getClientDb(), "users", userCredential.user.uid), {
           name,
           email,
           college: "",
@@ -83,7 +83,7 @@ export default function SignUpForm({ onSwitchMode, onSuccess }: SignUpFormProps)
     setError(null)
     try {
       const provider = new GoogleAuthProvider()
-      await signInWithPopup(auth, provider)
+      await signInWithPopup(getClientAuth(), provider)
       if (onSuccess) onSuccess()
       else router.push("/profile")
     } catch (err: any) {
@@ -97,7 +97,7 @@ export default function SignUpForm({ onSwitchMode, onSuccess }: SignUpFormProps)
     setError(null)
     try {
       const provider = new GithubAuthProvider()
-      await signInWithPopup(auth, provider)
+      await signInWithPopup(getClientAuth(), provider)
       if (onSuccess) onSuccess()
       else router.push("/profile")
     } catch (err: any) {

@@ -8,7 +8,7 @@ import { PageShell, StatCard } from "@/components/ui/page-shell"
 import { ProjectFeedCard, ProjectDetailModal } from "@/components/projects/project-feed"
 import { useAuth } from "@/context/AuthContext"
 import { doc, getDoc } from "firebase/firestore"
-import { db } from "@/backend/db/firebase"
+import { getClientDb } from "@/backend/db/firebase"
 import { ensureStudyverseId } from "@/backend/social/user-id"
 import {
   fetchAllProjects, fetchUserByStudyverseId,
@@ -63,7 +63,7 @@ export default function ProjectsPage() {
       try {
         const id = await ensureStudyverseId(user.uid)
         setMyStudyverseId(id)
-        const snap = await getDoc(doc(db, "users", user.uid))
+        const snap = await getDoc(doc(getClientDb(), "users", user.uid))
         if (snap.exists()) {
           const d = snap.data()
           setMyName((d.name as string) || user.displayName || "You")

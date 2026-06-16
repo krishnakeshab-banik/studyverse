@@ -17,7 +17,7 @@ import {
 } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { createUniqueStudyverseId, registerStudyverseId } from "@/backend/social/user-id";
-import { auth, db } from "@/backend/db/firebase";
+import { getClientAuth, getClientDb } from "@/backend/db/firebase";
 
 /* ─────────────────────── Types ─────────────────────── */
 
@@ -217,7 +217,7 @@ function InputField({
 
 async function saveNewUserDoc(uid: string, email: string, name: string, photoURL: string) {
   const studyverseId = await createUniqueStudyverseId()
-  await setDoc(doc(db, "users", uid), {
+  await setDoc(doc(getClientDb(), "users", uid), {
     name, email, college: "", year: "", major: "", bio: "", phone: "",
     photoURL, emailVerified: false, phoneVerified: false,
     studyverseId, followers: [], following: [],
@@ -276,7 +276,7 @@ export const SignInPage = ({ className }: SignInPageProps) => {
     e.preventDefault();
     setError(null); setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, siEmail, siPassword);
+      await signInWithEmailAndPassword(getClientAuth(), siEmail, siPassword);
       triggerSuccess(false);
     } catch (err: unknown) {
       const fe = err as { code?: string; message?: string };
@@ -298,7 +298,7 @@ export const SignInPage = ({ className }: SignInPageProps) => {
     if (suPassword !== suConfirm) { setError("Passwords do not match."); return; }
     setIsLoading(true);
     try {
-      const cred = await createUserWithEmailAndPassword(auth, suEmail, suPassword);
+      const cred = await createUserWithEmailAndPassword(getClientAuth(), suEmail, suPassword);
       await updateProfile(cred.user, { displayName: suName.trim() });
       await saveNewUserDoc(cred.user.uid, suEmail, suName.trim(), "");
       triggerSuccess(true);
@@ -318,8 +318,8 @@ export const SignInPage = ({ className }: SignInPageProps) => {
     setError(null);
     const provider = type === "google" ? new GoogleAuthProvider() : new GithubAuthProvider();
     try {
-      const result = await signInWithPopup(auth, provider);
-      const snap = await getDoc(doc(db, "users", result.user.uid));
+      const result = await signInWithPopup(getClientAuth(), provider);
+      const snap = await getDoc(doc(getClientDb(), "users", result.user.uid));
       if (!snap.exists()) {
         await saveNewUserDoc(result.user.uid, result.user.email || "", result.user.displayName || "", result.user.photoURL || "");
         triggerSuccess(true);

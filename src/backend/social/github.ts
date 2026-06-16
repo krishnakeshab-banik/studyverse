@@ -1,5 +1,5 @@
 import { doc, updateDoc } from "firebase/firestore"
-import { db } from "@/backend/db/firebase"
+import { getClientDb } from "@/backend/db/firebase"
 import type { GitHubContributions, GitHubPinnedRepo, GitHubStats } from "./types"
 
 interface GitHubUserResponse {
@@ -120,7 +120,7 @@ export async function fetchGitHubStats(rawUsername: string): Promise<GitHubStats
 
 export async function syncGitHubToUser(uid: string, rawUsername: string): Promise<GitHubStats> {
   const stats = await fetchGitHubStats(rawUsername)
-  await updateDoc(doc(db, "users", uid), {
+  await updateDoc(doc(getClientDb(), "users", uid), {
     githubUsername: stats.username,
     githubStats: stats,
     githubSyncedAt: Date.now(),

@@ -2,7 +2,7 @@ import {
   collection, doc, getDoc, getDocs, setDoc, updateDoc,
   query, where, orderBy, arrayUnion, arrayRemove, increment,
 } from "firebase/firestore"
-import { db } from "@/backend/db/firebase"
+import { getClientDb } from "@/backend/db/firebase"
 import type { ProjectComment, SVProject, UserPublicProfile } from "./types"
 
 const SEED_FLAG = "studyverse_projects_seeded_v2"
@@ -11,7 +11,7 @@ export const SEED_PROJECTS: Omit<SVProject, "ownerUid">[] = [
   {
     id: "P-8X92B", studyverseId: "U-110", authorName: "Alice M.",
     title: "The Dawn of Innovation",
-    description: "Explore the birth of groundbreaking ideas and inventions via an interactive timeline.",
+    description: "Explore the birth of groungetClientDb()reaking ideas and inventions via an interactive timeline.",
     github: "https://github.com", deployedUrl: "https://en.wikipedia.org/wiki/Main_Page",
     likes: 120, likedBy: [], stars: 34, starredBy: [], comments: [], timestamp: Date.now() - 100000, iconType: 0,
   },
@@ -31,8 +31,8 @@ export const SEED_PROJECTS: Omit<SVProject, "ownerUid">[] = [
   },
   {
     id: "P-2F80Z", studyverseId: "U-110", authorName: "Alice M.",
-    title: "CodeSandbox Clone",
-    description: "An experimental localized sandbox for React environments.",
+    title: "CodeSangetClientDb()ox Clone",
+    description: "An experimental localized sangetClientDb()ox for React environments.",
     github: "https://github.com", deployedUrl: "https://react.dev",
     likes: 45, likedBy: [], stars: 12, starredBy: [], comments: [], timestamp: Date.now() - 400000, iconType: 3,
   },
@@ -67,12 +67,12 @@ function parseProject(id: string, data: Record<string, unknown>): SVProject {
 }
 
 export async function seedProjectsIfNeeded(): Promise<void> {
-  const flagRef = doc(db, "meta", SEED_FLAG)
+  const flagRef = doc(getClientDb(), "meta", SEED_FLAG)
   const flagSnap = await getDoc(flagRef)
   if (flagSnap.exists()) return
 
   for (const p of SEED_PROJECTS) {
-    await setDoc(doc(db, "projects", p.id), {
+    await setDoc(doc(getClientDb(), "projects", p.id), {
       ...p,
       ownerUid: `seed-${p.studyverseId}`,
     })
@@ -82,18 +82,18 @@ export async function seedProjectsIfNeeded(): Promise<void> {
 
 export async function fetchAllProjects(): Promise<SVProject[]> {
   await seedProjectsIfNeeded()
-  const snap = await getDocs(query(collection(db, "projects"), orderBy("timestamp", "desc")))
+  const snap = await getDocs(query(collection(getClientDb(), "projects"), orderBy("timestamp", "desc")))
   return snap.docs.map(d => parseProject(d.id, d.data()))
 }
 
 export async function fetchProjectById(id: string): Promise<SVProject | null> {
-  const snap = await getDoc(doc(db, "projects", id))
+  const snap = await getDoc(doc(getClientDb(), "projects", id))
   if (!snap.exists()) return null
   return parseProject(snap.id, snap.data())
 }
 
 export async function fetchProjectsByStudyverseId(studyverseId: string): Promise<SVProject[]> {
-  const q = query(collection(db, "projects"), where("studyverseId", "==", studyverseId.toUpperCase()))
+  const q = query(collection(getClientDb(), "projects"), where("studyverseId", "==", studyverseId.toUpperCase()))
   const snap = await getDocs(q)
   return snap.docs.map(d => parseProject(d.id, d.data())).sort((a, b) => b.timestamp - a.timestamp)
 }
@@ -102,10 +102,10 @@ export async function fetchUserByStudyverseId(studyverseId: string): Promise<Use
   const normalized = studyverseId.trim().toUpperCase()
   if (!normalized.startsWith("U-")) return null
 
-  const indexSnap = await getDoc(doc(db, "users_by_id", normalized))
+  const indexSnap = await getDoc(doc(getClientDb(), "users_by_id", normalized))
   if (indexSnap.exists()) {
     const uid = indexSnap.data().uid as string
-    const userSnap = await getDoc(doc(db, "users", uid))
+    const userSnap = await getDoc(doc(getClientDb(), "users", uid))
     if (userSnap.exists()) {
       const d = userSnap.data()
       return {
@@ -169,12 +169,12 @@ export async function createProject(
     timestamp: Date.now(),
     iconType: Math.floor(Math.random() * 7),
   }
-  await setDoc(doc(db, "projects", id), project)
+  await setDoc(doc(getClientDb(), "projects", id), project)
   return project
 }
 
 export async function toggleLike(projectId: string, uid: string): Promise<void> {
-  const ref = doc(db, "projects", projectId)
+  const ref = doc(getClientDb(), "projects", projectId)
   const snap = await getDoc(ref)
   if (!snap.exists()) return
   const likedBy = (snap.data().likedBy as string[]) || []
@@ -186,7 +186,7 @@ export async function toggleLike(projectId: string, uid: string): Promise<void> 
 }
 
 export async function toggleStar(projectId: string, uid: string): Promise<void> {
-  const ref = doc(db, "projects", projectId)
+  const ref = doc(getClientDb(), "projects", projectId)
   const snap = await getDoc(ref)
   if (!snap.exists()) return
   const starredBy = (snap.data().starredBy as string[]) || []
@@ -212,7 +212,7 @@ export async function addComment(
     text: text.trim(),
     timestamp: Date.now(),
   }
-  const ref = doc(db, "projects", projectId)
+  const ref = doc(getClientDb(), "projects", projectId)
   const snap = await getDoc(ref)
   if (!snap.exists()) throw new Error("Project not found")
   const comments = [...((snap.data().comments as ProjectComment[]) || []), comment]
@@ -223,8 +223,8 @@ export async function addComment(
 export async function toggleFollow(followerUid: string, targetUid: string): Promise<boolean> {
   if (followerUid === targetUid) return false
 
-  const followerRef = doc(db, "users", followerUid)
-  const targetRef = doc(db, "users", targetUid)
+  const followerRef = doc(getClientDb(), "users", followerUid)
+  const targetRef = doc(getClientDb(), "users", targetUid)
   const [followerSnap, targetSnap] = await Promise.all([getDoc(followerRef), getDoc(targetRef)])
   if (!followerSnap.exists() || !targetSnap.exists()) return false
 
