@@ -30,6 +30,14 @@ interface PublicProfileViewProps {
   studyverseId: string
 }
 
+const VALID_TABS: ProfileTab[] = ["posts", "projects", "github", "leetcode"]
+
+function tabFromHash(): ProfileTab | null {
+  if (typeof window === "undefined") return null
+  const hash = window.location.hash.replace("#", "") as ProfileTab
+  return VALID_TABS.includes(hash) ? hash : null
+}
+
 export function PublicProfileView({ studyverseId }: PublicProfileViewProps) {
   const router = useRouter()
   const { user } = useAuth()
@@ -78,6 +86,21 @@ export function PublicProfileView({ studyverseId }: PublicProfileViewProps) {
   }, [studyverseId, user])
 
   useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    const initial = tabFromHash()
+    if (initial) setTab(initial)
+  }, [])
+
+  const handleTabChange = useCallback((next: ProfileTab) => {
+    setTab(next)
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", `#${next}`)
+      requestAnimationFrame(() => {
+        document.getElementById("profile-tab-panel")?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+      })
+    }
+  }, [])
 
   useEffect(() => {
     if (!user) return
@@ -318,8 +341,9 @@ export function PublicProfileView({ studyverseId }: PublicProfileViewProps) {
         }
       />
 
-      <ProfileTabs active={tab} onChange={setTab} />
+      <ProfileTabs active={tab} onChange={handleTabChange} />
 
+      <div id="profile-tab-panel" role="tabpanel" className="min-h-[200px]">
       {tab === "posts" && (
         posts.length === 0 ? (
           <div className="py-12 text-center text-gray-500 text-sm">No posts yet.</div>
@@ -365,6 +389,7 @@ export function PublicProfileView({ studyverseId }: PublicProfileViewProps) {
           leetcodeSyncedAt={profile.leetcodeSyncedAt}
         />
       )}
+      </div>
 
       {activeProject && (
         <ProjectDetailModal

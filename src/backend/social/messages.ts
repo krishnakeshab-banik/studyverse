@@ -55,10 +55,11 @@ export async function fetchConversations(uid: string): Promise<Conversation[]> {
   const q = query(
     collection(getClientDb(), "conversations"),
     where("participants", "array-contains", uid),
-    orderBy("updatedAt", "desc"),
   )
   const snap = await getDocs(q)
-  return snap.docs.map(d => parseConversation(d.id, d.data()))
+  return snap.docs
+    .map(d => parseConversation(d.id, d.data()))
+    .sort((a, b) => b.updatedAt - a.updatedAt)
 }
 
 export async function fetchMessages(conversationId: string): Promise<Message[]> {

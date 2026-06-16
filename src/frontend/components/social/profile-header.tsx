@@ -127,14 +127,21 @@ export function ProfileTabs({ active, onChange, showSettings }: ProfileTabsProps
   if (showSettings) tabs.push({ id: "settings", label: "Settings" })
 
   return (
-    <div className="flex gap-1 p-1 rounded-xl bg-white/[0.03] border border-white/[0.06] w-full max-w-full overflow-x-auto flex-wrap mb-6">
+    <div
+      role="tablist"
+      aria-label="Profile sections"
+      className="relative z-10 flex gap-1 p-1 rounded-xl bg-white/[0.03] border border-white/[0.06] w-full max-w-full overflow-x-auto scrollbar-thin mb-6"
+      style={{ WebkitOverflowScrolling: "touch" }}
+    >
       {tabs.map(tab => (
         <button
           key={tab.id}
           type="button"
+          role="tab"
+          aria-selected={active === tab.id}
           onClick={() => onChange(tab.id)}
           className={cn(
-            "px-4 py-2 rounded-lg text-sm font-semibold transition-all shrink-0",
+            "px-4 py-2 rounded-lg text-sm font-semibold transition-all shrink-0 whitespace-nowrap",
             active === tab.id ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-gray-500 hover:text-gray-300",
           )}
         >

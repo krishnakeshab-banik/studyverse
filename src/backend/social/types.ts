@@ -142,6 +142,12 @@ export interface LeetCodeProblem {
   timestamp?: number
 }
 
+export interface LeetCodeSubmissionDay {
+  date: string
+  count: number
+  level: number
+}
+
 export interface LeetCodeStats {
   username: string
   totalSolved: number
@@ -150,6 +156,7 @@ export interface LeetCodeStats {
   hardSolved: number
   ranking?: number
   recentProblems: LeetCodeProblem[]
+  submissionCalendar?: LeetCodeSubmissionDay[]
   profileUrl: string
 }
 

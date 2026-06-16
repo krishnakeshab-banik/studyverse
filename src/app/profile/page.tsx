@@ -72,9 +72,17 @@ const Section = ({ title, icon: Icon, children }: { title: string; icon?: Lucide
   </div>
 )
 
+const VALID_TABS: ProfileTab[] = ["posts", "projects", "github", "leetcode", "settings"]
+
+function tabFromHash(): ProfileTab | null {
+  if (typeof window === "undefined") return null
+  const hash = window.location.hash.replace("#", "") as ProfileTab
+  return VALID_TABS.includes(hash) ? hash : null
+}
+
 export default function ProfilePage() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const [tab, setTab] = useState<ProfileTab>("posts")
   const [editing, setEditing] = useState(false)
   const [showPwd, setShowPwd] = useState(false)
@@ -111,6 +119,21 @@ export default function ProfilePage() {
     ])
     setPosts(userPosts)
     setProjects(userProjects)
+  }, [])
+
+  useEffect(() => {
+    const initial = tabFromHash()
+    if (initial) setTab(initial)
+  }, [])
+
+  const handleTabChange = useCallback((next: ProfileTab) => {
+    setTab(next)
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", `#${next}`)
+      requestAnimationFrame(() => {
+        document.getElementById("profile-tab-panel")?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+      })
+    }
   }, [])
 
   useEffect(() => {
@@ -327,8 +350,9 @@ export default function ProfilePage() {
         />
       )}
 
-      <ProfileTabs active={tab} onChange={setTab} showSettings />
+      <ProfileTabs active={tab} onChange={handleTabChange} showSettings />
 
+      <div id="profile-tab-panel" role="tabpanel" className="min-h-[200px]">
       {tab === "posts" && (
         <>
           <ComposePost
@@ -381,7 +405,16 @@ export default function ProfilePage() {
         />
       )}
 
-      {tab === "settings" && user && (
+      {tab === "settings" && (
+        authLoading ? (
+          <div className="py-12 flex justify-center">
+            <div className="w-8 h-8 rounded-full border-2 border-indigo-500/30 border-t-indigo-500 animate-spin" />
+          </div>
+        ) : !user ? (
+          <div className="py-12 text-center text-gray-500 text-sm">
+            Sign in to manage your profile settings.
+          </div>
+        ) : (
         <div className="max-w-3xl flex flex-col gap-4">
           <Section title="Personal Information" icon={UserIcon}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -477,7 +510,9 @@ export default function ProfilePage() {
             </button>
           </div>
         </div>
+        )
       )}
+      </div>
 
       {activeProject && (
         <ProjectDetailModal
