@@ -6,7 +6,10 @@ import { cn } from "@/lib/utils"
 import { PageShell } from "@/components/ui/page-shell"
 import { PostCard } from "@/components/social/post-card"
 import type { PostCategory, SVPost } from "@/backend/social/types"
-import { fetchAllPosts, togglePostLike } from "@/backend/social/posts"
+import { fetchAllPosts, togglePostLike, addPostComment } from "@/backend/social/posts"
+import { doc, getDoc } from "firebase/firestore"
+import { getClientDb } from "@/backend/db/firebase"
+import { ensureStudyverseId } from "@/backend/social/user-id"
 import { useAuth } from "@/context/AuthContext"
 import { Compass } from "lucide-react"
 
@@ -25,6 +28,24 @@ export default function BrowsePage() {
   const [posts, setPosts] = useState<SVPost[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<FilterCategory>("all")
+  const [myName, setMyName] = useState("You")
+  const [myStudyverseId, setMyStudyverseId] = useState("")
+
+  useEffect(() => {
+    if (!user) return
+    ;(async () => {
+      try {
+        const id = await ensureStudyverseId(user.uid)
+        setMyStudyverseId(id)
+        const snap = await getDoc(doc(getClientDb(), "users", user.uid))
+        if (snap.exists()) {
+          setMyName((snap.data().name as string) || user.displayName || "You")
+        }
+      } catch (e) {
+        console.error(e)
+      }
+    })()
+  }, [user])
 
   const load = useCallback(async () => {
     try {
@@ -49,7 +70,27 @@ export default function BrowsePage() {
       likedBy: liked ? x.likedBy.filter(u => u !== user.uid) : [...x.likedBy, user.uid],
       likes: liked ? x.likes - 1 : x.likes + 1,
     } : x))
-    await togglePostLike(id, user.uid)
+    try {
+      await togglePostLike(id, user.uid)
+    } catch (e) {
+      console.error(e)
+      alert("Failed to update like")
+      load()
+    }
+  }
+
+  const handleComment = async (id: string, text: string) => {
+    if (!user || !myStudyverseId) return alert("Sign in to comment")
+    try {
+      const comment = await addPostComment(id, user.uid, myName, myStudyverseId, text)
+      setPosts(prev => prev.map(x => x.id === id ? {
+        ...x,
+        comments: [...(x.comments || []), comment],
+      } : x))
+    } catch (e) {
+      console.error(e)
+      alert("Failed to add comment")
+    }
   }
 
   const displayed = filter === "all" ? posts : posts.filter(p => p.category === filter)
@@ -95,6 +136,7 @@ export default function BrowsePage() {
               post={p}
               currentUid={user?.uid}
               onLike={handleLike}
+              onComment={handleComment}
               onViewProfile={id => router.push(`/profile/${id}`)}
             />
           ))}

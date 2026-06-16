@@ -3,7 +3,8 @@ import {
   query, where, orderBy, arrayUnion, arrayRemove, increment,
 } from "firebase/firestore"
 import { getClientDb } from "@/backend/db/firebase"
-import type { PostCategory, SVPost } from "./types"
+import type { PostCategory, PostComment, SVPost } from "./types"
+import { createNotification } from "./notifications"
 
 function parsePost(id: string, data: Record<string, unknown>): SVPost {
   return {
@@ -18,6 +19,7 @@ function parsePost(id: string, data: Record<string, unknown>): SVPost {
     leetcodeSlug: data.leetcodeSlug as string | undefined,
     likes: (data.likes as number) || 0,
     likedBy: (data.likedBy as string[]) || [],
+    comments: (data.comments as PostComment[]) || [],
     timestamp: (data.timestamp as number) || Date.now(),
   }
 }
@@ -47,6 +49,7 @@ export async function createPost(
     leetcodeSlug: input.leetcodeSlug?.trim() || undefined,
     likes: 0,
     likedBy: [],
+    comments: [],
     timestamp: Date.now(),
   }
   await setDoc(doc(getClientDb(), "posts", id), post)
@@ -81,12 +84,52 @@ export async function togglePostLike(postId: string, uid: string): Promise<void>
   const ref = doc(getClientDb(), "posts", postId)
   const snap = await getDoc(ref)
   if (!snap.exists()) return
-  const likedBy = (snap.data().likedBy as string[]) || []
+  const data = snap.data()
+  const likedBy = (data.likedBy as string[]) || []
   const already = likedBy.includes(uid)
   await updateDoc(ref, already
     ? { likedBy: arrayRemove(uid), likes: increment(-1) }
     : { likedBy: arrayUnion(uid), likes: increment(1) },
   )
+
+  if (!already) {
+    const authorUid = data.authorUid as string
+    if (authorUid && authorUid !== uid) {
+      try {
+        await createNotification(authorUid, {
+          type: "post_like",
+          fromUid: uid,
+          postId,
+          message: "liked your post",
+        })
+      } catch {
+        // non-critical
+      }
+    }
+  }
+}
+
+export async function addPostComment(
+  postId: string,
+  authorUid: string,
+  authorName: string,
+  studyverseId: string,
+  text: string,
+): Promise<PostComment> {
+  const comment: PostComment = {
+    id: Date.now().toString(),
+    authorUid,
+    authorName,
+    studyverseId,
+    text: text.trim(),
+    timestamp: Date.now(),
+  }
+  const ref = doc(getClientDb(), "posts", postId)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) throw new Error("Post not found")
+  const comments = [...((snap.data().comments as PostComment[]) || []), comment]
+  await updateDoc(ref, { comments })
+  return comment
 }
 
 export async function countPostsByUid(uid: string): Promise<number> {

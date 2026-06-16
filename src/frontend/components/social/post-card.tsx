@@ -1,8 +1,10 @@
 "use client"
 
+import { useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
 import type { PostCategory, SVPost } from "@/backend/social/types"
-import { Heart, User, ExternalLink, Code2 } from "lucide-react"
+import { Heart, User, ExternalLink, Code2, MessageCircle, Send } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 const CATEGORY_LABELS: Record<PostCategory, string> = {
@@ -21,16 +23,27 @@ interface PostCardProps {
   post: SVPost
   currentUid?: string
   onLike: (id: string) => void
+  onComment?: (id: string, text: string) => void
   onViewProfile?: (studyverseId: string) => void
 }
 
-export function PostCard({ post, currentUid, onLike, onViewProfile }: PostCardProps) {
+export function PostCard({ post, currentUid, onLike, onComment, onViewProfile }: PostCardProps) {
   const router = useRouter()
+  const [showComments, setShowComments] = useState(false)
+  const [commentText, setCommentText] = useState("")
   const liked = currentUid ? post.likedBy.includes(currentUid) : false
+  const comments = post.comments || []
 
   const openProfile = () => {
     if (onViewProfile) onViewProfile(post.studyverseId)
     else router.push(`/profile/${post.studyverseId}`)
+  }
+
+  const submitComment = () => {
+    if (!commentText.trim() || !onComment) return
+    onComment(post.id, commentText.trim())
+    setCommentText("")
+    setShowComments(true)
   }
 
   const timeAgo = formatTimeAgo(post.timestamp)
@@ -38,7 +51,7 @@ export function PostCard({ post, currentUid, onLike, onViewProfile }: PostCardPr
   return (
     <article className="rounded-2xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-sm overflow-hidden">
       <div className="flex gap-3 p-4">
-        <button onClick={openProfile} className="shrink-0">
+        <button type="button" onClick={openProfile} className="shrink-0">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center overflow-hidden">
             {post.authorPhoto
               ? <img src={post.authorPhoto} alt="" className="w-full h-full object-cover" />
@@ -47,7 +60,7 @@ export function PostCard({ post, currentUid, onLike, onViewProfile }: PostCardPr
         </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={openProfile} className="text-sm font-semibold text-white hover:text-indigo-300">
+            <button type="button" onClick={openProfile} className="text-sm font-semibold text-white hover:text-indigo-300">
               {post.authorName}
             </button>
             <span className="text-[11px] font-bold text-indigo-400">{post.studyverseId}</span>
@@ -71,6 +84,7 @@ export function PostCard({ post, currentUid, onLike, onViewProfile }: PostCardPr
           )}
           <div className="flex items-center gap-1 mt-3">
             <button
+              type="button"
               onClick={() => onLike(post.id)}
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all",
@@ -82,9 +96,55 @@ export function PostCard({ post, currentUid, onLike, onViewProfile }: PostCardPr
               <Heart size={14} className={liked ? "fill-rose-400" : ""} />
               {post.likes || null}
             </button>
+            <button
+              type="button"
+              onClick={() => setShowComments(v => !v)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-500 hover:text-indigo-400 hover:bg-white/5 transition-all"
+            >
+              <MessageCircle size={14} />
+              {comments.length || null}
+            </button>
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showComments && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="border-t border-white/[0.06] overflow-hidden"
+          >
+            <div className="px-4 py-3 flex flex-col gap-3 max-h-48 overflow-y-auto">
+              {comments.length === 0 && (
+                <p className="text-gray-600 text-xs text-center py-2">No comments yet. Be the first!</p>
+              )}
+              {comments.map(c => (
+                <div key={c.id} className="text-sm">
+                  <span className="font-semibold text-indigo-300">{c.authorName}</span>
+                  <span className="text-gray-600 text-xs ml-2">{c.studyverseId}</span>
+                  <p className="text-gray-300 mt-0.5">{c.text}</p>
+                </div>
+              ))}
+            </div>
+            {currentUid && onComment && (
+              <div className="px-4 pb-3 flex gap-2">
+                <input
+                  value={commentText}
+                  onChange={e => setCommentText(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && submitComment()}
+                  placeholder="Add a comment..."
+                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 h-9 text-sm text-white placeholder:text-gray-600 outline-none focus:border-indigo-500/40"
+                />
+                <button type="button" onClick={submitComment} className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center hover:bg-indigo-500">
+                  <Send size={14} className="text-white" />
+                </button>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </article>
   )
 }

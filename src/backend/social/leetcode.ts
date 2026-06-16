@@ -1,6 +1,7 @@
 import { doc, updateDoc } from "firebase/firestore"
 import { getClientDb } from "@/backend/db/firebase"
-import type { LeetCodeProblem, LeetCodeStats } from "./types"
+import { stripUndefined } from "@/backend/db/strip-undefined"
+import type { LeetCodeProblem, LeetCodeStats, LeetCodeSubmissionDay } from "./types"
 
 function parseUsername(input: string): string {
   return input.trim().replace(/^@/, "").replace(/\/$/, "")
@@ -14,6 +15,7 @@ interface LeetCodeStatsApiResponse {
   mediumSolved?: number
   hardSolved?: number
   ranking?: number
+  submissionCalendar?: string | Record<string, number>
 }
 
 interface AlfaSubmission {
@@ -21,6 +23,92 @@ interface AlfaSubmission {
   titleSlug?: string
   difficulty?: string
   timestamp?: string | number
+}
+
+function countToLevel(count: number): number {
+  if (count <= 0) return 0
+  if (count === 1) return 1
+  if (count <= 3) return 2
+  if (count <= 6) return 3
+  return 4
+}
+
+function parseSubmissionCalendar(raw: string | Record<string, number> | undefined): LeetCodeSubmissionDay[] {
+  if (!raw) return []
+  try {
+    const obj = typeof raw === "string" ? JSON.parse(raw) as Record<string, number> : raw
+    return Object.entries(obj)
+      .map(([ts, count]) => {
+        const n = Number(count)
+        const date = new Date(Number(ts) * 1000).toISOString().slice(0, 10)
+        return { date, count: n, level: countToLevel(n) }
+      })
+      .sort((a, b) => a.date.localeCompare(b.date))
+  } catch {
+    return []
+  }
+}
+
+async function fetchFromHeroku(username: string): Promise<Partial<LeetCodeStatsApiResponse> | null> {
+  try {
+    const res = await fetch(`https://leetcode-stats-api.herokuapp.com/${encodeURIComponent(username)}`)
+    if (!res.ok) return null
+    const data = (await res.json()) as LeetCodeStatsApiResponse
+    if (data.status === "error" || data.message?.toLowerCase().includes("not found")) return null
+    return data
+  } catch {
+    return null
+  }
+}
+
+async function fetchFromAlfa(username: string): Promise<Partial<LeetCodeStatsApiResponse> | null> {
+  try {
+    const res = await fetch(`https://alfa-leetcode-api.onrender.com/${encodeURIComponent(username)}/solved`)
+    if (!res.ok) return null
+    const data = (await res.json()) as {
+      solvedProblem?: number
+      easySolved?: number
+      mediumSolved?: number
+      hardSolved?: number
+      ranking?: number
+      submissionCalendar?: string | Record<string, number>
+    }
+    if (!data.solvedProblem && !data.easySolved && !data.mediumSolved && !data.hardSolved) return null
+    return {
+      totalSolved: data.solvedProblem,
+      easySolved: data.easySolved,
+      mediumSolved: data.mediumSolved,
+      hardSolved: data.hardSolved,
+      ranking: data.ranking,
+      submissionCalendar: data.submissionCalendar,
+    }
+  } catch {
+    return null
+  }
+}
+
+async function fetchFromFuxsw(username: string): Promise<Partial<LeetCodeStatsApiResponse> | null> {
+  try {
+    const res = await fetch(`https://leetcode-api-fuxsw.vercel.app/${encodeURIComponent(username)}`)
+    if (!res.ok) return null
+    const data = (await res.json()) as LeetCodeStatsApiResponse & {
+      totalQuestions?: number
+      solvedStats?: { easy?: number; medium?: number; hard?: number }
+    }
+    if (data.status === "error" || data.message?.toLowerCase().includes("not found")) return null
+    return {
+      totalSolved: data.totalSolved ?? data.solvedStats
+        ? (data.solvedStats?.easy ?? 0) + (data.solvedStats?.medium ?? 0) + (data.solvedStats?.hard ?? 0)
+        : undefined,
+      easySolved: data.easySolved ?? data.solvedStats?.easy,
+      mediumSolved: data.mediumSolved ?? data.solvedStats?.medium,
+      hardSolved: data.hardSolved ?? data.solvedStats?.hard,
+      ranking: data.ranking,
+      submissionCalendar: data.submissionCalendar,
+    }
+  } catch {
+    return null
+  }
 }
 
 async function fetchRecentProblems(username: string): Promise<LeetCodeProblem[]> {
@@ -50,34 +138,41 @@ export async function fetchLeetCodeStats(rawUsername: string): Promise<LeetCodeS
   const username = parseUsername(rawUsername)
   if (!username) throw new Error("Enter a valid LeetCode username")
 
-  const res = await fetch(`https://leetcode-stats-api.herokuapp.com/${encodeURIComponent(username)}`)
-  if (!res.ok) throw new Error("Could not reach LeetCode — try again later")
+  const [heroku, alfa, fuxsw, recentProblems] = await Promise.all([
+    fetchFromHeroku(username),
+    fetchFromAlfa(username),
+    fetchFromFuxsw(username),
+    fetchRecentProblems(username),
+  ])
 
-  const data = (await res.json()) as LeetCodeStatsApiResponse
-  if (data.status === "error" || data.message?.toLowerCase().includes("not found")) {
+  const merged = { ...fuxsw, ...alfa, ...heroku }
+  if (!merged.totalSolved && merged.totalSolved !== 0) {
     throw new Error("LeetCode user not found")
   }
 
-  const recentProblems = await fetchRecentProblems(username)
+  const submissionCalendar = parseSubmissionCalendar(
+    heroku?.submissionCalendar ?? alfa?.submissionCalendar ?? fuxsw?.submissionCalendar,
+  )
 
   return {
     username,
-    totalSolved: data.totalSolved ?? 0,
-    easySolved: data.easySolved ?? 0,
-    mediumSolved: data.mediumSolved ?? 0,
-    hardSolved: data.hardSolved ?? 0,
-    ranking: data.ranking,
+    totalSolved: merged.totalSolved ?? 0,
+    easySolved: merged.easySolved ?? 0,
+    mediumSolved: merged.mediumSolved ?? 0,
+    hardSolved: merged.hardSolved ?? 0,
+    ranking: merged.ranking,
     recentProblems,
+    submissionCalendar: submissionCalendar.length > 0 ? submissionCalendar : undefined,
     profileUrl: `https://leetcode.com/${username}/`,
   }
 }
 
 export async function syncLeetCodeToUser(uid: string, rawUsername: string): Promise<LeetCodeStats> {
   const stats = await fetchLeetCodeStats(rawUsername)
-  await updateDoc(doc(getClientDb(), "users", uid), {
+  await updateDoc(doc(getClientDb(), "users", uid), stripUndefined({
     leetcodeUsername: stats.username,
     leetcodeStats: stats,
     leetcodeSyncedAt: Date.now(),
-  })
+  }))
   return stats
 }

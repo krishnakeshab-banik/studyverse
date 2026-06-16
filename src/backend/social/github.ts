@@ -1,5 +1,6 @@
 import { doc, updateDoc } from "firebase/firestore"
 import { getClientDb } from "@/backend/db/firebase"
+import { stripUndefined } from "@/backend/db/strip-undefined"
 import type { GitHubContributions, GitHubPinnedRepo, GitHubStats } from "./types"
 
 interface GitHubUserResponse {
@@ -120,10 +121,10 @@ export async function fetchGitHubStats(rawUsername: string): Promise<GitHubStats
 
 export async function syncGitHubToUser(uid: string, rawUsername: string): Promise<GitHubStats> {
   const stats = await fetchGitHubStats(rawUsername)
-  await updateDoc(doc(getClientDb(), "users", uid), {
+  await updateDoc(doc(getClientDb(), "users", uid), stripUndefined({
     githubUsername: stats.username,
     githubStats: stats,
     githubSyncedAt: Date.now(),
-  })
+  }))
   return stats
 }

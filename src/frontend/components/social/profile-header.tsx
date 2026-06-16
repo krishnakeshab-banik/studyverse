@@ -10,16 +10,19 @@ interface ProfileStatsHeaderProps {
   projectCount: number
   repoCount?: number
   isFollowing: boolean
+  isPending?: boolean
   isSelf: boolean
   onFollow?: () => void
+  onUnfollow?: () => void
+  onCancelRequest?: () => void
   onCopyId?: () => void
   copied?: boolean
   action?: React.ReactNode
 }
 
 export function ProfileStatsHeader({
-  profile, postCount, projectCount, repoCount, isFollowing, isSelf,
-  onFollow, onCopyId, copied, action,
+  profile, postCount, projectCount, repoCount, isFollowing, isPending, isSelf,
+  onFollow, onUnfollow, onCancelRequest, onCopyId, copied, action,
 }: ProfileStatsHeaderProps) {
   const initials = profile.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
 
@@ -51,17 +54,28 @@ export function ProfileStatsHeader({
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {action}
-              {!isSelf && !profile.uid.startsWith("seed-") && onFollow && (
+              {!isSelf && !profile.uid.startsWith("seed-") && (onFollow || onUnfollow || onCancelRequest) && (
                 <button
-                  onClick={onFollow}
+                  type="button"
+                  onClick={() => {
+                    if (isFollowing && onUnfollow) onUnfollow()
+                    else if (isPending && onCancelRequest) onCancelRequest()
+                    else if (onFollow) onFollow()
+                  }}
                   className={cn(
                     "flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all",
                     isFollowing
                       ? "bg-white/10 text-gray-300 border border-white/10"
-                      : "bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-500/20",
+                      : isPending
+                        ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                        : "bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-500/20",
                   )}
                 >
-                  {isFollowing ? <><UserCheck size={16} /> Following</> : <><UserPlus size={16} /> Follow</>}
+                  {isFollowing
+                    ? <><UserCheck size={16} /> Following</>
+                    : isPending
+                      ? <>Requested</>
+                      : <><UserPlus size={16} /> Follow</>}
                 </button>
               )}
             </div>
@@ -113,13 +127,21 @@ export function ProfileTabs({ active, onChange, showSettings }: ProfileTabsProps
   if (showSettings) tabs.push({ id: "settings", label: "Settings" })
 
   return (
-    <div className="flex gap-1 p-1 rounded-xl bg-white/[0.03] border border-white/[0.06] w-fit mb-6">
+    <div
+      role="tablist"
+      aria-label="Profile sections"
+      className="relative z-10 flex gap-1 p-1 rounded-xl bg-white/[0.03] border border-white/[0.06] w-full max-w-full overflow-x-auto scrollbar-thin mb-6"
+      style={{ WebkitOverflowScrolling: "touch" }}
+    >
       {tabs.map(tab => (
         <button
           key={tab.id}
+          type="button"
+          role="tab"
+          aria-selected={active === tab.id}
           onClick={() => onChange(tab.id)}
           className={cn(
-            "px-4 py-2 rounded-lg text-sm font-semibold transition-all",
+            "px-4 py-2 rounded-lg text-sm font-semibold transition-all shrink-0 whitespace-nowrap",
             active === tab.id ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-gray-500 hover:text-gray-300",
           )}
         >

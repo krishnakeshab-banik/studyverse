@@ -13,7 +13,7 @@ import { AccountSyncSettings } from "@/components/social/account-sync-settings"
 import { ProjectDetailModal } from "@/components/projects/project-feed"
 import { ensureStudyverseId } from "@/backend/social/user-id"
 import { fetchProjectsByStudyverseId, toggleLike, toggleStar } from "@/backend/social/projects"
-import { fetchPostsByUid, createPost, togglePostLike } from "@/backend/social/posts"
+import { fetchPostsByUid, createPost, togglePostLike, addPostComment } from "@/backend/social/posts"
 import type { GitHubStats, LeetCodeStats, SVPost, SVProject } from "@/backend/social/types"
 import {
   UserIcon, CheckCircle2, AlertCircle,
@@ -72,9 +72,17 @@ const Section = ({ title, icon: Icon, children }: { title: string; icon?: Lucide
   </div>
 )
 
+const VALID_TABS: ProfileTab[] = ["posts", "projects", "github", "leetcode", "settings"]
+
+function tabFromHash(): ProfileTab | null {
+  if (typeof window === "undefined") return null
+  const hash = window.location.hash.replace("#", "") as ProfileTab
+  return VALID_TABS.includes(hash) ? hash : null
+}
+
 export default function ProfilePage() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const [tab, setTab] = useState<ProfileTab>("posts")
   const [editing, setEditing] = useState(false)
   const [showPwd, setShowPwd] = useState(false)
@@ -111,6 +119,21 @@ export default function ProfilePage() {
     ])
     setPosts(userPosts)
     setProjects(userProjects)
+  }, [])
+
+  useEffect(() => {
+    const initial = tabFromHash()
+    if (initial) setTab(initial)
+  }, [])
+
+  const handleTabChange = useCallback((next: ProfileTab) => {
+    setTab(next)
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", `#${next}`)
+      requestAnimationFrame(() => {
+        document.getElementById("profile-tab-panel")?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+      })
+    }
   }, [])
 
   useEffect(() => {
@@ -199,7 +222,7 @@ export default function ProfilePage() {
   }
 
   const handlePostLike = async (id: string) => {
-    if (!user) return
+    if (!user) return alert("Sign in to like")
     const p = posts.find(x => x.id === id)
     if (!p) return
     const liked = p.likedBy.includes(user.uid)
@@ -208,7 +231,26 @@ export default function ProfilePage() {
       likedBy: liked ? x.likedBy.filter(u => u !== user.uid) : [...x.likedBy, user.uid],
       likes: liked ? x.likes - 1 : x.likes + 1,
     } : x))
-    await togglePostLike(id, user.uid)
+    try {
+      await togglePostLike(id, user.uid)
+    } catch (e) {
+      console.error(e)
+      alert("Failed to update like")
+    }
+  }
+
+  const handlePostComment = async (id: string, text: string) => {
+    if (!user || !studyverseId) return alert("Sign in to comment")
+    try {
+      const comment = await addPostComment(id, user.uid, profile.name, studyverseId, text)
+      setPosts(prev => prev.map(x => x.id === id ? {
+        ...x,
+        comments: [...(x.comments || []), comment],
+      } : x))
+    } catch (e) {
+      console.error(e)
+      alert("Failed to add comment")
+    }
   }
 
   const handleProjectLike = async (id: string) => {
@@ -308,8 +350,9 @@ export default function ProfilePage() {
         />
       )}
 
-      <ProfileTabs active={tab} onChange={setTab} showSettings />
+      <ProfileTabs active={tab} onChange={handleTabChange} showSettings />
 
+      <div id="profile-tab-panel" role="tabpanel" className="min-h-[200px]">
       {tab === "posts" && (
         <>
           <ComposePost
@@ -322,7 +365,7 @@ export default function ProfilePage() {
           ) : (
             <div className="flex flex-col gap-3 max-w-2xl">
               {posts.map(p => (
-                <PostCard key={p.id} post={p} currentUid={user?.uid} onLike={handlePostLike} />
+                <PostCard key={p.id} post={p} currentUid={user?.uid} onLike={handlePostLike} onComment={handlePostComment} />
               ))}
             </div>
           )}
@@ -362,7 +405,16 @@ export default function ProfilePage() {
         />
       )}
 
-      {tab === "settings" && user && (
+      {tab === "settings" && (
+        authLoading ? (
+          <div className="py-12 flex justify-center">
+            <div className="w-8 h-8 rounded-full border-2 border-indigo-500/30 border-t-indigo-500 animate-spin" />
+          </div>
+        ) : !user ? (
+          <div className="py-12 text-center text-gray-500 text-sm">
+            Sign in to manage your profile settings.
+          </div>
+        ) : (
         <div className="max-w-3xl flex flex-col gap-4">
           <Section title="Personal Information" icon={UserIcon}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -458,7 +510,9 @@ export default function ProfilePage() {
             </button>
           </div>
         </div>
+        )
       )}
+      </div>
 
       {activeProject && (
         <ProjectDetailModal
