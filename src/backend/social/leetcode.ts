@@ -1,5 +1,6 @@
 import { doc, updateDoc } from "firebase/firestore"
 import { getClientDb } from "@/backend/db/firebase"
+import { stripUndefined } from "@/backend/db/strip-undefined"
 import type { LeetCodeProblem, LeetCodeStats, LeetCodeSubmissionDay } from "./types"
 
 function parseUsername(input: string): string {
@@ -168,10 +169,10 @@ export async function fetchLeetCodeStats(rawUsername: string): Promise<LeetCodeS
 
 export async function syncLeetCodeToUser(uid: string, rawUsername: string): Promise<LeetCodeStats> {
   const stats = await fetchLeetCodeStats(rawUsername)
-  await updateDoc(doc(getClientDb(), "users", uid), {
+  await updateDoc(doc(getClientDb(), "users", uid), stripUndefined({
     leetcodeUsername: stats.username,
     leetcodeStats: stats,
     leetcodeSyncedAt: Date.now(),
-  })
+  }))
   return stats
 }
