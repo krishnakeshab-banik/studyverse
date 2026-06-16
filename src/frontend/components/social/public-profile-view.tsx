@@ -10,13 +10,21 @@ import { ProjectDetailModal } from "@/components/projects/project-feed"
 import { useAuth } from "@/context/AuthContext"
 import {
   fetchUserByStudyverseId, fetchProjectsByStudyverseId,
-  toggleFollow, toggleLike, toggleStar,
+  toggleLike, toggleStar,
 } from "@/backend/social/projects"
 import {
-  fetchPostsByStudyverseId, togglePostLike,
+  fetchPostsByStudyverseId, togglePostLike, addPostComment,
 } from "@/backend/social/posts"
+import {
+  sendFollowRequest, unfollow, cancelFollowRequest, getFollowRequest,
+} from "@/backend/social/follow-requests"
+import { blockUser } from "@/backend/social/blocks"
+import { canMessage } from "@/backend/social/messages"
+import { doc, getDoc } from "firebase/firestore"
+import { getClientDb } from "@/backend/db/firebase"
+import { ensureStudyverseId } from "@/backend/social/user-id"
 import type { SVPost, SVProject, UserPublicProfile } from "@/backend/social/types"
-import { User, ArrowLeft } from "lucide-react"
+import { User, ArrowLeft, MessageSquare, Ban } from "lucide-react"
 
 interface PublicProfileViewProps {
   studyverseId: string
@@ -34,6 +42,10 @@ export function PublicProfileView({ studyverseId }: PublicProfileViewProps) {
   const [tab, setTab] = useState<ProfileTab>("posts")
   const [copiedId, setCopiedId] = useState(false)
   const [activeProject, setActiveProject] = useState<SVProject | null>(null)
+  const [isPending, setIsPending] = useState(false)
+  const [canMsg, setCanMsg] = useState(false)
+  const [myName, setMyName] = useState("You")
+  const [myStudyverseId, setMyStudyverseId] = useState("")
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -51,15 +63,37 @@ export function PublicProfileView({ studyverseId }: PublicProfileViewProps) {
       ])
       setPosts(userPosts)
       setProjects(userProjects)
+
+      if (user && user.uid !== p.uid) {
+        const req = await getFollowRequest(user.uid, p.uid)
+        setIsPending(req?.status === "pending")
+        setCanMsg(await canMessage(user.uid, p.uid))
+      }
     } catch (e) {
       console.error(e)
       setNotFound(true)
     } finally {
       setLoading(false)
     }
-  }, [studyverseId])
+  }, [studyverseId, user])
 
   useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    if (!user) return
+    ;(async () => {
+      try {
+        const id = await ensureStudyverseId(user.uid)
+        setMyStudyverseId(id)
+        const snap = await getDoc(doc(getClientDb(), "users", user.uid))
+        if (snap.exists()) {
+          setMyName((snap.data().name as string) || user.displayName || "You")
+        }
+      } catch (e) {
+        console.error(e)
+      }
+    })()
+  }, [user])
 
   const isSelf = user?.uid === profile?.uid
   const isFollowing = profile ? (user ? profile.followers.includes(user.uid) : false) : false
@@ -67,13 +101,60 @@ export function PublicProfileView({ studyverseId }: PublicProfileViewProps) {
   const handleFollow = async () => {
     if (!user || !profile) return alert("Sign in to follow")
     if (profile.uid.startsWith("seed-")) return alert("Demo account")
-    const nowFollowing = await toggleFollow(user.uid, profile.uid)
-    setProfile(prev => prev ? {
-      ...prev,
-      followers: nowFollowing
-        ? [...prev.followers, user.uid]
-        : prev.followers.filter(u => u !== user.uid),
-    } : null)
+    try {
+      const result = await sendFollowRequest(
+        user.uid, profile.uid, myStudyverseId || "U-???", myName, user.photoURL || undefined,
+      )
+      if (result === "blocked") return alert("Unable to send follow request")
+      if (result === "already_following") return
+      if (result === "already_pending") {
+        setIsPending(true)
+        return
+      }
+      setIsPending(true)
+      alert("Follow request sent!")
+    } catch (e) {
+      console.error(e)
+      alert("Failed to send follow request")
+    }
+  }
+
+  const handleUnfollow = async () => {
+    if (!user || !profile) return
+    try {
+      await unfollow(user.uid, profile.uid)
+      setProfile(prev => prev ? {
+        ...prev,
+        followers: prev.followers.filter(u => u !== user.uid),
+      } : null)
+      setIsPending(false)
+    } catch (e) {
+      console.error(e)
+      alert("Failed to unfollow")
+    }
+  }
+
+  const handleCancelRequest = async () => {
+    if (!user || !profile) return
+    try {
+      await cancelFollowRequest(user.uid, profile.uid)
+      setIsPending(false)
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const handleBlock = async () => {
+    if (!user || !profile) return
+    if (!confirm(`Block ${profile.name}? They won't be able to message or follow you.`)) return
+    try {
+      await blockUser(user.uid, profile.uid)
+      alert("User blocked")
+      router.push("/browse")
+    } catch (e) {
+      console.error(e)
+      alert("Failed to block user")
+    }
   }
 
   const handlePostLike = async (id: string) => {
@@ -86,11 +167,31 @@ export function PublicProfileView({ studyverseId }: PublicProfileViewProps) {
       likedBy: liked ? x.likedBy.filter(u => u !== user.uid) : [...x.likedBy, user.uid],
       likes: liked ? x.likes - 1 : x.likes + 1,
     } : x))
-    await togglePostLike(id, user.uid)
+    try {
+      await togglePostLike(id, user.uid)
+    } catch (e) {
+      console.error(e)
+      alert("Failed to update like")
+      load()
+    }
+  }
+
+  const handlePostComment = async (id: string, text: string) => {
+    if (!user || !myStudyverseId) return alert("Sign in to comment")
+    try {
+      const comment = await addPostComment(id, user.uid, myName, myStudyverseId, text)
+      setPosts(prev => prev.map(x => x.id === id ? {
+        ...x,
+        comments: [...(x.comments || []), comment],
+      } : x))
+    } catch (e) {
+      console.error(e)
+      alert("Failed to add comment")
+    }
   }
 
   const handleProjectLike = async (id: string) => {
-    if (!user) return
+    if (!user) return alert("Sign in to like")
     const p = projects.find(x => x.id === id)
     if (!p) return
     const liked = p.likedBy.includes(user.uid)
@@ -99,7 +200,12 @@ export function PublicProfileView({ studyverseId }: PublicProfileViewProps) {
       likedBy: liked ? x.likedBy.filter(u => u !== user.uid) : [...x.likedBy, user.uid],
       likes: liked ? x.likes - 1 : x.likes + 1,
     } : x))
-    await toggleLike(id, user.uid)
+    try {
+      await toggleLike(id, user.uid)
+    } catch (e) {
+      console.error(e)
+      alert("Failed to update like")
+    }
     if (activeProject?.id === id) {
       setActiveProject(prev => prev ? {
         ...prev,
@@ -110,7 +216,7 @@ export function PublicProfileView({ studyverseId }: PublicProfileViewProps) {
   }
 
   const handleProjectStar = async (id: string) => {
-    if (!user) return
+    if (!user) return alert("Sign in to star")
     const p = projects.find(x => x.id === id)
     if (!p) return
     const starred = p.starredBy.includes(user.uid)
@@ -119,7 +225,12 @@ export function PublicProfileView({ studyverseId }: PublicProfileViewProps) {
       starredBy: starred ? x.starredBy.filter(u => u !== user.uid) : [...x.starredBy, user.uid],
       stars: starred ? x.stars - 1 : x.stars + 1,
     } : x))
-    await toggleStar(id, user.uid)
+    try {
+      await toggleStar(id, user.uid)
+    } catch (e) {
+      console.error(e)
+      alert("Failed to update star")
+    }
     if (activeProject?.id === id) {
       setActiveProject(prev => prev ? {
         ...prev,
@@ -168,18 +279,43 @@ export function PublicProfileView({ studyverseId }: PublicProfileViewProps) {
         projectCount={projects.length}
         repoCount={profile.githubStats?.publicRepos}
         isFollowing={isFollowing}
+        isPending={isPending}
         isSelf={isSelf}
         onFollow={handleFollow}
+        onUnfollow={handleUnfollow}
+        onCancelRequest={handleCancelRequest}
         onCopyId={copyUserId}
         copied={copiedId}
-        action={isSelf ? (
-          <button
-            onClick={() => router.push("/profile")}
-            className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-300 border border-white/10 bg-white/5 hover:bg-white/10"
-          >
-            Edit profile
-          </button>
-        ) : undefined}
+        action={
+          <div className="flex items-center gap-2">
+            {isSelf ? (
+              <button
+                onClick={() => router.push("/profile")}
+                className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-300 border border-white/10 bg-white/5 hover:bg-white/10"
+              >
+                Edit profile
+              </button>
+            ) : (
+              <>
+                {canMsg && (
+                  <button
+                    onClick={() => router.push(`/messages?uid=${profile.uid}`)}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-indigo-400 border border-indigo-500/20 bg-indigo-500/10 hover:bg-indigo-500/20"
+                  >
+                    <MessageSquare size={14} /> Message
+                  </button>
+                )}
+                <button
+                  onClick={handleBlock}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold text-red-400 border border-red-500/20 bg-red-500/10 hover:bg-red-500/20"
+                  title="Block user"
+                >
+                  <Ban size={14} />
+                </button>
+              </>
+            )}
+          </div>
+        }
       />
 
       <ProfileTabs active={tab} onChange={setTab} />
@@ -190,7 +326,13 @@ export function PublicProfileView({ studyverseId }: PublicProfileViewProps) {
         ) : (
           <div className="flex flex-col gap-3 max-w-2xl">
             {posts.map(p => (
-              <PostCard key={p.id} post={p} currentUid={user?.uid} onLike={handlePostLike} />
+              <PostCard
+                key={p.id}
+                post={p}
+                currentUid={user?.uid}
+                onLike={handlePostLike}
+                onComment={handlePostComment}
+              />
             ))}
           </div>
         )
@@ -232,7 +374,7 @@ export function PublicProfileView({ studyverseId }: PublicProfileViewProps) {
           onLike={handleProjectLike}
           onStar={handleProjectStar}
           onOpenLive={id => router.push(`/projects/${id}`)}
-          onViewProfile={() => {}}
+          onViewProfile={() => router.push(`/profile/${profile.studyverseId}`)}
         />
       )}
     </>

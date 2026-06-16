@@ -69,7 +69,7 @@ export function PageShell({
           {/* Content */}
           <div
             className={cn(
-              "rounded-3xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-sm shadow-2xl overflow-hidden",
+              "rounded-3xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-sm shadow-2xl",
               !noPadding && "p-4 sm:p-6",
               contentClassName,
             )}

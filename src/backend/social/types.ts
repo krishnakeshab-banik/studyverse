@@ -7,6 +7,60 @@ export interface ProjectComment {
   timestamp: number
 }
 
+export interface PostComment {
+  id: string
+  authorUid: string
+  authorName: string
+  studyverseId: string
+  text: string
+  timestamp: number
+}
+
+export type FollowRequestStatus = "pending" | "accepted" | "declined"
+
+export interface FollowRequest {
+  id: string
+  fromUid: string
+  toUid: string
+  fromStudyverseId: string
+  fromName: string
+  fromPhoto?: string
+  status: FollowRequestStatus
+  timestamp: number
+}
+
+export type NotificationType = "follow_request" | "follow_accepted" | "post_like"
+
+export interface SVNotification {
+  id: string
+  type: NotificationType
+  read: boolean
+  timestamp: number
+  fromUid?: string
+  fromStudyverseId?: string
+  fromName?: string
+  fromPhoto?: string
+  followRequestId?: string
+  postId?: string
+  message?: string
+}
+
+export interface Conversation {
+  id: string
+  participants: [string, string]
+  updatedAt: number
+  lastMessage?: string
+  lastSenderUid?: string
+}
+
+export interface Message {
+  id: string
+  senderUid: string
+  text: string
+  timestamp: number
+  deleted?: boolean
+}
+
 export interface SVProject {
   id: string
   ownerUid: string
@@ -40,6 +94,7 @@ export interface SVPost {
   leetcodeSlug?: string
   likes: number
   likedBy: string[]
+  comments: PostComment[]
   timestamp: number
 }
 

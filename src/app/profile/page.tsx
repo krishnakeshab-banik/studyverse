@@ -13,7 +13,7 @@ import { AccountSyncSettings } from "@/components/social/account-sync-settings"
 import { ProjectDetailModal } from "@/components/projects/project-feed"
 import { ensureStudyverseId } from "@/backend/social/user-id"
 import { fetchProjectsByStudyverseId, toggleLike, toggleStar } from "@/backend/social/projects"
-import { fetchPostsByUid, createPost, togglePostLike } from "@/backend/social/posts"
+import { fetchPostsByUid, createPost, togglePostLike, addPostComment } from "@/backend/social/posts"
 import type { GitHubStats, LeetCodeStats, SVPost, SVProject } from "@/backend/social/types"
 import {
   UserIcon, CheckCircle2, AlertCircle,
@@ -199,7 +199,7 @@ export default function ProfilePage() {
   }
 
   const handlePostLike = async (id: string) => {
-    if (!user) return
+    if (!user) return alert("Sign in to like")
     const p = posts.find(x => x.id === id)
     if (!p) return
     const liked = p.likedBy.includes(user.uid)
@@ -208,7 +208,26 @@ export default function ProfilePage() {
       likedBy: liked ? x.likedBy.filter(u => u !== user.uid) : [...x.likedBy, user.uid],
       likes: liked ? x.likes - 1 : x.likes + 1,
     } : x))
-    await togglePostLike(id, user.uid)
+    try {
+      await togglePostLike(id, user.uid)
+    } catch (e) {
+      console.error(e)
+      alert("Failed to update like")
+    }
+  }
+
+  const handlePostComment = async (id: string, text: string) => {
+    if (!user || !studyverseId) return alert("Sign in to comment")
+    try {
+      const comment = await addPostComment(id, user.uid, profile.name, studyverseId, text)
+      setPosts(prev => prev.map(x => x.id === id ? {
+        ...x,
+        comments: [...(x.comments || []), comment],
+      } : x))
+    } catch (e) {
+      console.error(e)
+      alert("Failed to add comment")
+    }
   }
 
   const handleProjectLike = async (id: string) => {
@@ -322,7 +341,7 @@ export default function ProfilePage() {
           ) : (
             <div className="flex flex-col gap-3 max-w-2xl">
               {posts.map(p => (
-                <PostCard key={p.id} post={p} currentUid={user?.uid} onLike={handlePostLike} />
+                <PostCard key={p.id} post={p} currentUid={user?.uid} onLike={handlePostLike} onComment={handlePostComment} />
               ))}
             </div>
           )}

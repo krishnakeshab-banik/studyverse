@@ -62,7 +62,7 @@ export function LeetCodePanel({ leetcodeUsername, leetcodeStats, leetcodeSyncedA
         <StatCard icon={Code2} label="Hard" value={stats.hardSolved} accent="#ef4444" />
       </div>
 
-      {stats.recentProblems.length > 0 && (
+      {stats.recentProblems && stats.recentProblems.length > 0 && (
         <div>
           <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Recent solved</h4>
           <div className="flex flex-col gap-2">
