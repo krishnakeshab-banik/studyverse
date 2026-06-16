@@ -19,7 +19,11 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./src/*"],
+      "@/components/*": ["./src/frontend/components/*"],
+      "@/context/*": ["./src/frontend/store/*"],
+      "@/lib/*": ["./src/frontend/lib/*"],
+      "@/backend/*": ["./src/backend/*"]
     }
   },
   "include": [
