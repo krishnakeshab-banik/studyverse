@@ -446,13 +446,16 @@ export default function CalendarPage() {
                        </div>
                        
                         <div className="flex flex-col gap-3 mt-2 bg-white/[0.03] p-3 rounded-xl border border-white/5">
-                          <div className="flex items-center gap-3">
-                            <button type="button" onClick={() => setFormRemind(!formRemind)} className={cn("w-5 h-5 rounded border flex items-center justify-center transition-colors", formRemind ? "bg-indigo-600 border-indigo-600" : "border-gray-600")}>
+                          <div 
+                            onClick={() => setFormRemind(!formRemind)} 
+                            className="flex items-center gap-3 cursor-pointer select-none"
+                          >
+                            <div className={cn("w-5 h-5 rounded border flex items-center justify-center transition-colors", formRemind ? "bg-indigo-600 border-indigo-600" : "border-gray-600")}>
                               {formRemind && <Check size={12} className="text-white" />}
-                            </button>
-                            <label className="text-sm text-gray-300 flex items-center gap-2 cursor-pointer select-none" onClick={() => setFormRemind(!formRemind)}>
+                            </div>
+                            <span className="text-sm text-gray-300 flex items-center gap-2">
                               <Bell size={14} className={formRemind ? "text-amber-400" : "text-gray-500"} /> Enable Reminders
-                            </label>
+                            </span>
                           </div>
                           
                           {formRemind && (
