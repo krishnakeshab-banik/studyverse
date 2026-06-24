@@ -436,9 +436,9 @@ export default function VirtualStudyPage() {
               </div>
 
               {/* Split Content */}
-              <div className="flex-1 flex gap-4 min-h-0">
+              <div className="flex-1 flex flex-col md:flex-row gap-4 min-h-0 overflow-y-auto md:overflow-hidden">
                 {/* Left: Video */}
-                <div className="w-[60%] bg-[#050505] rounded-2xl border border-white/10 overflow-hidden relative shadow-2xl">
+                <div className="w-full md:w-[60%] h-[300px] md:h-auto bg-[#050505] rounded-2xl border border-white/10 overflow-hidden relative shadow-2xl shrink-0 md:shrink">
                   {extractYTId(activeProj.youtubeUrl) ? (
                     <iframe 
                       src={`https://www.youtube.com/embed/${extractYTId(activeProj.youtubeUrl)}?autoplay=1`} 
