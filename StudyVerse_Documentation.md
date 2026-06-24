@@ -174,4 +174,4 @@ The platform integrates artificial intelligence to offer personalized assistance
 6. Schedule study sessions in the Calendar
 7. Explore the Marketplace for additional resources
 
-StudyVerse is designed to adapt to your learning style and grow with your educational journey, providing tools that make studying more effective, organized, and enjoyable.
+StudyVerse is a platform designed to adapt to your learning style and grow with your educational journey, providing tools that make studying more effective, organized, and enjoyable. 
