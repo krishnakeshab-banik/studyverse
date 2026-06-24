@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { auth } from "@/backend/db/firebase";
+import { getClientAuth } from "@/backend/db/firebase";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -27,9 +27,9 @@ export function AuthForm() {
 
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
+        await signInWithEmailAndPassword(getClientAuth(), email, password);
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
+        await createUserWithEmailAndPassword(getClientAuth(), email, password);
       }
     } catch (err: any) {
       setError(err.message || "Failed to authenticate");
@@ -40,7 +40,7 @@ export function AuthForm() {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      await signOut(getClientAuth());
     } catch (err: any) {
       console.error("Failed to log out", err);
     }
@@ -50,7 +50,7 @@ export function AuthForm() {
     setError(null);
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      await signInWithPopup(getClientAuth(), provider);
     } catch (err: any) {
       setError(err.message || "Failed to sign in with Google");
     }
@@ -60,7 +60,7 @@ export function AuthForm() {
     setError(null);
     try {
       const provider = new GithubAuthProvider();
-      await signInWithPopup(auth, provider);
+      await signInWithPopup(getClientAuth(), provider);
     } catch (err: any) {
       setError(err.message || "Failed to sign in with GitHub");
     }

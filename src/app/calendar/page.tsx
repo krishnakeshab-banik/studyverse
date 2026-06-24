@@ -1,17 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import Link from "next/link"
-import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
-import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar"
+import { PageShell, StatCard } from "@/components/ui/page-shell"
 import {
-  BookOpen, Brain, ShoppingBag, CalendarDays, MessageSquare, LogOut, User,
-  ChevronLeft, ChevronRight, Plus, X, Clock, Play, Bell, Calendar as CalIcon, Check, MoreVertical, Trash2,
-  Activity, FolderGit2
+  ChevronLeft, ChevronRight, Plus, Clock, Bell, Calendar as CalIcon, Check, Trash2,
+  CalendarDays,
 } from "lucide-react"
 import { collection, addDoc, deleteDoc, doc, getDocs, query, where, serverTimestamp, Timestamp, writeBatch, onSnapshot } from "firebase/firestore"
-import { db } from "@/backend/db/firebase"
+import { getClientDb } from "@/backend/db/firebase"
 import { useAuth } from "@/context/AuthContext"
 
 // ─── Types and Config ──────────────────────────────────────────
@@ -32,23 +29,11 @@ interface StudySession {
   googleEventId?: string
 }
 
-// ─── Sidebar Helpers ────────────────────────────────────────
-const navLinks = [
-  { label: "Library",       href: "/library",     icon: <BookOpen      size={24} className="text-neutral-400 flex-shrink-0" /> },
-  { label: "Virtual Study", href: "/study",       icon: <Brain         size={24} className="text-neutral-400 flex-shrink-0" /> },
-  { label: "Marketplace",   href: "/marketplace", icon: <ShoppingBag   size={24} className="text-neutral-400 flex-shrink-0" /> },
-  { label: "Calendar",      href: "/calendar",    icon: <CalendarDays  size={24} className="text-indigo-400 flex-shrink-0" /> },
-  { label: "Post Doubts",   href: "/doubts",      icon: <MessageSquare size={24} className="text-neutral-400 flex-shrink-0" /> },
-  { label: "Analytics",     href: "/analytics",   icon: <Activity      size={24} className="text-neutral-400 flex-shrink-0" /> },
-]
-
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
 export default function CalendarPage() {
   const { user } = useAuth()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split("T")[0])
   
@@ -76,7 +61,7 @@ export default function CalendarPage() {
       return
     }
 
-    const unsub = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
+    const unsub = onSnapshot(doc(getClientDb(), "users", user.uid), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data()
         setGoogleCalendarConnected(!!data.googleCalendarConnected)
@@ -154,13 +139,13 @@ export default function CalendarPage() {
     try {
       setIsLoading(true)
       const q = query(
-        collection(db, "calendar_sessions"),
+        collection(getClientDb(), "calendar_sessions"),
         where("userId", "==", user.uid)
       )
       const querySnapshot = await getDocs(q)
       const fetchedSessions: StudySession[] = []
       
-      const batch = writeBatch(db)
+      const batch = writeBatch(getClientDb())
       let hasMigrations = false
 
       querySnapshot.forEach((docSnap) => {
@@ -241,7 +226,7 @@ export default function CalendarPage() {
         createdAt: serverTimestamp()
       }
       
-      const docRef = await addDoc(collection(db, "calendar_sessions"), newSessionData)
+      const docRef = await addDoc(collection(getClientDb(), "calendar_sessions"), newSessionData)
       
       const sessionWithId = { id: docRef.id, ...newSessionData } as StudySession
       setSessions([...sessions, sessionWithId])
@@ -286,7 +271,7 @@ export default function CalendarPage() {
         }).catch(err => console.error("Failed to delete Google Calendar event:", err))
       }
 
-      await deleteDoc(doc(db, "calendar_sessions", id))
+      await deleteDoc(doc(getClientDb(), "calendar_sessions", id))
       setSessions(sessions.filter(s => s.id !== id))
     } catch (error) {
       console.error("Firestore error deleting session:", error)
@@ -332,45 +317,27 @@ export default function CalendarPage() {
     return [...blanks, ...days]
   }
 
+  const totalSessions = sessions.length
+  const todaySessions = sessions.filter(s => s.date === new Date().toISOString().split("T")[0]).length
+  const totalHours = sessions.reduce((a, s) => a + s.duration, 0)
+
   return (
-    <div className="flex h-screen w-full bg-[#080808] overflow-hidden font-sans">
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen}>
-        <SidebarBody className="justify-between gap-10" style={{ background: "#0d0d0d", borderRight: "1px solid rgba(255,255,255,0.06)" }}>
-          <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
-            <Link href="/" className="flex items-center gap-3 py-1 z-20">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)", boxShadow: "0 0 16px rgba(99,102,241,0.4)" }}>
-                <BookOpen size={20} className="text-white" />
-              </div>
-              <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="font-bold text-white text-lg tracking-tight whitespace-pre">StudyVerse</motion.span>
-            </Link>
-            <div className="mt-8 flex flex-col gap-0.5">
-              {navLinks.map((link, i) => <SidebarLink key={i} link={link} className="hover:bg-white/5 rounded-lg px-2 transition-colors py-3" />)}
-            </div>
-          </div>
-          <div className="flex flex-col gap-0.5 pb-2">
-             <div className="border-t border-white/[0.06] mb-2" />
-             <SidebarLink link={{ label: "Profile", href: "/profile",
-               icon: <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0" style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)" }}><User size={16} /></div>
-             }} className="bg-white/[0.06] rounded-lg px-2" />
-             <SidebarLink link={{ label: "Logout", href: "/", icon: <LogOut size={22} className="text-red-400 flex-shrink-0 ml-0.5" /> }} className="hover:bg-red-500/10 rounded-lg px-2 transition-colors" />
-           </div>
-        </SidebarBody>
-      </Sidebar>
-
-      <main className="flex-1 overflow-hidden flex flex-col relative z-0">
-        <div className="px-6 pt-6 shrink-0 relative z-10 w-full">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent relative top-1">Calendar</h1>
-              <p className="text-gray-500 text-sm mt-1">Plan, schedule, and meticulously manage your study time.</p>
-            </div>
-          </div>
+    <PageShell
+      title="Calendar"
+      subtitle="Plan, schedule, and manage your study time"
+      icon={CalIcon}
+      iconAccent="#6366f1"
+      stats={
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+          <StatCard icon={CalIcon} label="Total sessions" value={totalSessions} accent="#6366f1" />
+          <StatCard icon={Clock} label="Today's sessions" value={todaySessions} accent="#10b981" />
+          <StatCard icon={Bell} label="Planned hours" value={`${totalHours.toFixed(1)}h`} accent="#f59e0b" />
         </div>
-
-        <div className="flex-1 px-6 pb-6 mt-2 relative z-10 overflow-hidden flex flex-col w-full">
-          <div className="flex-1 rounded-3xl border border-white/10 bg-[#0c0c0c] relative overflow-hidden flex flex-col shadow-2xl">
-            
-            <div className="flex-1 overflow-y-auto p-6 relative z-10 w-full flex flex-col lg:flex-row gap-6">
+      }
+      noPadding
+      contentClassName="p-4 sm:p-6"
+    >
+      <div className="flex flex-col lg:flex-row gap-6">
               
               {/* Left Side: Calendar Grid */}
               <div className="flex-[2] flex flex-col min-w-0">
@@ -563,10 +530,7 @@ export default function CalendarPage() {
                 </div>
               </div>
               
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
+      </div>
+    </PageShell>
   )
 }

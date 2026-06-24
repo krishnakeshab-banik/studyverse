@@ -1,16 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import Link from "next/link"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
-import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar"
-import { GradientDots } from "@/components/ui/gradient-dots"
+import { PageShell, StatCard } from "@/components/ui/page-shell"
 import {
-  BookOpen, Brain, ShoppingBag, CalendarDays, MessageSquare, LogOut, User,
-  ChevronLeft, ChevronRight, Plus, X, Search, ThumbsUp, MessageCircle, FileImage, 
-  Sparkles, Send, ArrowLeft, Tag, Layers, Clock,
-  Activity, FolderGit2
+  Plus, X, Search, ThumbsUp, MessageCircle, FileImage,
+  Sparkles, Send, ArrowLeft, Layers, Clock, User, MessageSquare,
 } from "lucide-react"
 
 // ─── Types and Config ──────────────────────────────────────────
@@ -49,19 +45,7 @@ const MOCK_DOUBTS: Doubt[] = [
   }
 ]
 
-// ─── Sidebar Helpers ────────────────────────────────────────
-const navLinks = [
-  { label: "Library",       href: "/library",     icon: <BookOpen      size={24} className="text-neutral-400 flex-shrink-0" /> },
-  { label: "Virtual Study", href: "/study",       icon: <Brain         size={24} className="text-neutral-400 flex-shrink-0" /> },
-  { label: "Marketplace",   href: "/marketplace", icon: <ShoppingBag   size={24} className="text-neutral-400 flex-shrink-0" /> },
-  { label: "Calendar",      href: "/calendar",    icon: <CalendarDays  size={24} className="text-neutral-400 flex-shrink-0" /> },
-  { label: "Projects",      href: "/projects",    icon: <FolderGit2    size={24} className="text-neutral-400 flex-shrink-0" /> },
-  { label: "Post Doubts",   href: "/doubts",      icon: <MessageSquare size={24} className="text-indigo-400 flex-shrink-0" /> },
-  { label: "Analytics",     href: "/analytics",   icon: <Activity      size={24} className="text-neutral-400 flex-shrink-0" /> },
-]
-
 export default function DoubtsPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [doubts, setDoubts] = useState<Doubt[]>([])
   const [activeTab, setActiveTab] = useState<"Browse" | "Mine">("Browse")
   const [search, setSearch] = useState("")
@@ -144,71 +128,49 @@ export default function DoubtsPage() {
   if (activeTab === "Browse") displayed.sort((a,b) => b.upvotes - a.upvotes)
   else displayed.sort((a,b) => b.timestamp - a.timestamp)
 
+  const totalAnswers = doubts.reduce((a, d) => a + d.answers.length, 0)
+  const myDoubts = doubts.filter(d => d.isMine).length
+
   return (
-    <div className="flex h-screen w-full bg-[#080808] overflow-hidden font-sans">
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen}>
-        <SidebarBody className="justify-between gap-10" style={{ background: "#0d0d0d", borderRight: "1px solid rgba(255,255,255,0.06)" }}>
-          <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
-            <Link href="/" className="flex items-center gap-3 py-1 z-20">
-               <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)", boxShadow: "0 0 16px rgba(99,102,241,0.4)" }}>
-                 <BookOpen size={20} className="text-white" />
-               </div>
-               <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="font-bold text-white text-lg tracking-tight whitespace-pre">StudyVerse</motion.span>
-            </Link>
-            <div className="mt-8 flex flex-col gap-0.5">
-               {navLinks.map((link, i) => <SidebarLink key={i} link={link} className="hover:bg-white/5 rounded-lg px-2 transition-colors py-3" />)}
-            </div>
+    <PageShell
+      title="Community Doubts"
+      subtitle="Ask questions, share knowledge, and learn together"
+      icon={MessageSquare}
+      iconAccent="#6366f1"
+      action={
+        !activeDoubt && !showForm ? (
+          <button onClick={() => setShowForm(true)} className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 shadow-[0_0_16px_rgba(99,102,241,0.3)] transition-all">
+            <Plus size={16} /> Post a Doubt
+          </button>
+        ) : undefined
+      }
+      stats={
+        !activeDoubt && !showForm ? (
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+            <StatCard icon={MessageSquare} label="Total doubts" value={doubts.length} accent="#6366f1" />
+            <StatCard icon={MessageCircle} label="Community answers" value={totalAnswers} accent="#10b981" />
+            <StatCard icon={User} label="My doubts" value={myDoubts} accent="#f59e0b" />
           </div>
-          <div className="flex flex-col gap-0.5 pb-2">
-             <div className="border-t border-white/[0.06] mb-2" />
-             <SidebarLink link={{ label: "Profile", href: "/profile",
-               icon: <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0" style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)" }}><User size={16} /></div>
-             }} className="bg-white/[0.06] rounded-lg px-2" />
-             <SidebarLink link={{ label: "Logout", href: "/", icon: <LogOut size={22} className="text-red-400 flex-shrink-0 ml-0.5" /> }} className="hover:bg-red-500/10 rounded-lg px-2 transition-colors" />
-           </div>
-        </SidebarBody>
-      </Sidebar>
-
-      <main className="flex-1 overflow-hidden flex flex-col relative z-0">
-        <div className="px-6 pt-6 shrink-0 relative z-10 w-full">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent relative top-1">Community Doubts</h1>
-              <p className="text-gray-500 text-sm mt-1">Ask questions, share knowledge, and learn together.</p>
-            </div>
-            {!activeDoubt && !showForm && (
-              <button onClick={() => setShowForm(true)} className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 shadow-[0_0_16px_rgba(99,102,241,0.3)] transition-all">
-                <Plus size={16} /> Post a Doubt
+        ) : undefined
+      }
+      toolbar={
+        !activeDoubt && !showForm ? (
+          <div className="flex gap-4 border-b border-white/10">
+            {(["Browse", "Mine"] as const).map(tab => (
+              <button key={tab} onClick={() => setActiveTab(tab)}
+                className={cn("pb-3 text-sm font-bold transition-all relative border-b-2",
+                  activeTab === tab ? "text-indigo-400 border-indigo-500" : "text-gray-500 border-transparent hover:text-gray-300"
+                )}>
+                {tab === "Mine" ? "My Doubts" : "Explore"}
               </button>
-            )}
+            ))}
           </div>
-          
-          {!activeDoubt && !showForm && (
-            <div className="flex gap-4 border-b border-white/10">
-               {(["Browse", "Mine"] as const).map(tab => (
-                 <button key={tab} onClick={() => setActiveTab(tab)}
-                    className={cn("pb-3 text-sm font-bold transition-all relative border-b-2",
-                       activeTab === tab ? "text-indigo-400 border-indigo-500" : "text-gray-500 border-transparent hover:text-gray-300"
-                    )}>
-                    {tab === "Mine" ? "My Doubts" : "Explore"}
-                 </button>
-               ))}
-            </div>
-          )}
-        </div>
-
-        <div className="flex-1 px-6 pb-6 mt-4 relative z-10 overflow-hidden flex flex-col w-full">
-          
-          {/* Main Content Area Box */}
-          <div className="flex-1 rounded-3xl border border-white/10 bg-[#0c0c0c] relative overflow-hidden flex flex-col shadow-2xl">
-            {/* The Background is only present on the list views */}
-            {!activeDoubt && !showForm && (
-              <div className="absolute inset-0 z-0 pointer-events-none opacity-30">
-                <GradientDots backgroundColor="#0c0c0c" />
-              </div>
-            )}
-            
-            <div className="flex-1 overflow-y-auto p-6 relative z-10 w-full">
+        ) : undefined
+      }
+      noPadding
+      contentClassName="p-4 sm:p-6"
+    >
+      <div className="relative z-10 w-full">
                
                {/* ── LIST VIEW ── */}
                {!activeDoubt && !showForm && (
@@ -383,10 +345,7 @@ export default function DoubtsPage() {
                     </div>
                  </div>
                )}
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
+      </div>
+    </PageShell>
   )
 }

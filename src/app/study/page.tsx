@@ -1,17 +1,15 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
-import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar"
+import { PageShell, StatCard, GlassPanel } from "@/components/ui/page-shell"
 import { GradientDots } from "@/components/ui/gradient-dots"
 import {
-  BookOpen, Brain, ShoppingBag, CalendarDays, MessageSquare, LogOut,
-  Plus, X, Play, Clock, FolderKanban, FileText, Calculator, Sparkles,
-  Highlighter, Send, ChevronRight, Calculator as CalcIcon, Trash2,
-  Check, ArrowLeft, Video, Target, User,
-  Activity, FolderGit2
+  Plus, X, Play, Clock, FolderKanban, FileText, Sparkles,
+  Highlighter, Send, ChevronRight, Trash2,
+  Check, ArrowLeft, Video, Target, Calculator as CalcIcon,
+  BookOpen,
 } from "lucide-react"
 
 // ─── Types and Config ──────────────────────────────────────────
@@ -42,36 +40,6 @@ const extractYTId = (url: string) => {
   const match = url.match(regExp)
   return match && match[2].length === 11 ? match[2] : null
 }
-
-// ─── Sidebar Helpers ────────────────────────────────────────
-const Logo = () => (
-  <Link href="/" className="flex items-center gap-3 py-1 z-20">
-    <div className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center"
-      style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)", boxShadow: "0 0 16px rgba(99,102,241,0.4)" }}>
-      <BookOpen size={20} className="text-white" />
-    </div>
-    <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="font-bold text-white text-lg tracking-tight whitespace-pre">
-      StudyVerse
-    </motion.span>
-  </Link>
-)
-const LogoIcon = () => (
-  <Link href="/" className="flex items-center py-1 z-20">
-    <div className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center"
-      style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)", boxShadow: "0 0 16px rgba(99,102,241,0.4)" }}>
-      <BookOpen size={20} className="text-white" />
-    </div>
-  </Link>
-)
-const navLinks = [
-  { label: "Library",       href: "/library",     icon: <BookOpen      size={24} className="text-neutral-400 flex-shrink-0" /> },
-  { label: "Virtual Study", href: "/study",       icon: <Brain         size={24} className="text-indigo-400 flex-shrink-0" /> },
-  { label: "Marketplace",   href: "/marketplace", icon: <ShoppingBag   size={24} className="text-neutral-400 flex-shrink-0" /> },
-  { label: "Calendar",      href: "/calendar",    icon: <CalendarDays  size={24} className="text-neutral-400 flex-shrink-0" /> },
-  { label: "Projects",      href: "/projects",    icon: <FolderGit2    size={24} className="text-neutral-400 flex-shrink-0" /> },
-  { label: "Post Doubts",   href: "/doubts",      icon: <MessageSquare size={24} className="text-neutral-400 flex-shrink-0" /> },
-  { label: "Analytics",     href: "/analytics",   icon: <Activity      size={24} className="text-neutral-400 flex-shrink-0" /> },
-]
 
 // ─── Simple Calculator ─────────────────────────────────────────
 function CalculatorTool() {
@@ -186,7 +154,6 @@ function ProjectModal({ onSave, onCancel }: { onSave: (t: string, d: string, u: 
 
 // ─── Main Application ──────────────────────────────────────────
 export default function VirtualStudyPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [wks, setWks] = useState<Workspace[]>([])
   
   // Navigation State
@@ -289,55 +256,74 @@ export default function VirtualStudyPage() {
     setAiInput("")
   }
 
+  const totalProjects = wks.reduce((a, w) => a + w.projects.length, 0)
+  const totalStudySeconds = wks.reduce((a, w) => a + w.projects.reduce((b, p) => b + p.timeSpentSeconds, 0), 0)
+
+  const pageTitle = activeProj
+    ? activeProj.topic
+    : activeWk
+      ? activeWk.topic
+      : "Virtual Study"
+  const pageSubtitle = activeProj
+    ? `${activeWk?.subject || "Workspace"} · Focus room`
+    : activeWk
+      ? `${activeWk.subject} · ${activeWk.projects.length} project${activeWk.projects.length !== 1 ? "s" : ""}`
+      : "Immersive focus rooms and project workspaces"
+
+  const pageAction = activeProj ? undefined : activeWk ? (
+    <button onClick={() => setShowPModal(true)}
+      className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 shadow-[0_0_16px_rgba(99,102,241,0.3)] transition-all">
+      <Plus size={16} /> New Project
+    </button>
+  ) : (
+    <button onClick={() => setShowWModal(true)}
+      className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 shadow-[0_0_16px_rgba(99,102,241,0.3)] transition-all">
+      <Plus size={16} /> New Workspace
+    </button>
+  )
+
   return (
-    <div className="flex relative h-screen w-full bg-[#080808] overflow-hidden font-sans">
-      {/* ── Sidebar ── */}
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen}>
-        <SidebarBody className="justify-between gap-10" style={{ background: "#0d0d0d", borderRight: "1px solid rgba(255,255,255,0.06)" }}>
-          <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
-            {sidebarOpen ? <Logo /> : <LogoIcon />}
-            <div className="mt-8 flex flex-col gap-0.5">
-              {navLinks.map((link, i) => <SidebarLink key={i} link={link} className="hover:bg-white/5 rounded-lg px-2 transition-colors py-3" />)}
+    <PageShell
+      title={pageTitle}
+      subtitle={pageSubtitle}
+      icon={BookOpen}
+      iconAccent="#6366f1"
+      action={pageAction}
+      stats={!activeWk && !activeProj ? (
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+          <StatCard icon={FolderKanban} label="Workspaces" value={wks.length} accent="#6366f1" />
+          <StatCard icon={Video} label="Projects" value={totalProjects} accent="#10b981" />
+          <StatCard icon={Clock} label="Time studied" value={formatTime(totalStudySeconds)} accent="#f59e0b" />
+        </div>
+      ) : undefined}
+      noPadding
+      contentClassName="p-4 sm:p-6 min-h-[60vh] relative"
+    >
+      {(activeWk || activeProj) && (
+        <div className="flex items-center gap-3 mb-4">
+          <button
+            onClick={() => activeProj ? setActiveProj(null) : setActiveWk(null)}
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+          >
+            <ArrowLeft size={16} className="text-gray-300" />
+          </button>
+          {activeWk && !activeProj && (
+            <div className="flex items-center gap-2 text-xs text-indigo-400 font-bold tracking-wider uppercase">
+              Workspace <ChevronRight size={12} className="text-gray-600" /> {activeWk.subject}
             </div>
-          </div>
-          <div className="flex flex-col gap-0.5 pb-2">
-             <div className="border-t border-white/[0.06] mb-2" />
-             <SidebarLink link={{ label: "Profile", href: "/profile",
-               icon: <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
-                 style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)" }}><User size={16} /></div>
-             }} className="bg-white/[0.06] rounded-lg px-2" />
-             <SidebarLink link={{ label: "Logout", href: "/", icon: <LogOut size={22} className="text-red-400 flex-shrink-0 ml-0.5" /> }}
-               className="hover:bg-red-500/10 rounded-lg px-2 transition-colors" />
-           </div>
-        </SidebarBody>
-      </Sidebar>
+          )}
+        </div>
+      )}
 
-      {/* ── Main Content Area ── */}
-      {/* ── Main Content Area ── */}
-      <main className="flex-1 overflow-hidden flex flex-col relative z-0">
-        <div className="absolute top-0 right-0 w-[500px] h-[300px] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none z-0" />
-
-        <div className="flex-1 overflow-hidden flex flex-col px-6 py-6 relative z-10 w-full">
+      <div className="relative z-10 w-full">
           
           {/* LEVEL 1: ALL WORKSPACES */}
           {!activeWk && !activeProj && (
-            <div className="flex flex-col h-full w-full">
-              <div className="flex items-center justify-between mb-8">
-                <div>
-                  <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">Virtual Study</h1>
-                  <p className="text-gray-500 text-sm mt-1">Immersive focus rooms and project workspaces.</p>
-                </div>
-                <button onClick={() => setShowWModal(true)}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 shadow-[0_0_16px_rgba(99,102,241,0.3)] transition-all">
-                  <Plus size={16} /> New Workspace
-                </button>
+            <GlassPanel className="relative overflow-hidden flex flex-col min-h-[420px]">
+              <div className="absolute inset-0 z-0 pointer-events-none opacity-40">
+                <GradientDots backgroundColor="transparent" />
               </div>
-
-              <div className="flex-1 rounded-3xl border border-white/10 bg-[#0c0c0c] relative overflow-hidden flex flex-col shadow-2xl">
-                <div className="absolute inset-0 z-0 pointer-events-none opacity-40">
-                  <GradientDots backgroundColor="#0c0c0c" />
-                </div>
-                <div className="flex-1 overflow-y-auto p-6 relative z-10">
+              <div className="flex-1 overflow-y-auto p-6 relative z-10">
                   {wks.length === 0 ? (
                     <div className="flex-1 flex flex-col items-center justify-center gap-4 border border-dashed border-white/10 rounded-3xl bg-white/[0.01] h-full">
                       <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
@@ -374,38 +360,16 @@ export default function VirtualStudyPage() {
                       ))}
                     </div>
                   )}
-                </div>
               </div>
-            </div>
+            </GlassPanel>
           )}
 
-          {/* LEVEL 2: ACTIVE WORKSPACE & PROJECTS */}
           {activeWk && !activeProj && (
-            <div className="flex flex-col h-full w-full">
-              {/* Breadcrumb Header */}
-              <div className="flex items-center gap-3 mb-8">
-                <button onClick={() => setActiveWk(null)} className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
-                  <ArrowLeft size={16} className="text-gray-300" />
-                </button>
-                <div>
-                  <div className="flex items-center gap-2 text-xs text-indigo-400 font-bold tracking-wider uppercase mb-0.5">
-                    Workspace <ChevronRight size={12} className="text-gray-600" /> {activeWk.subject}
-                  </div>
-                  <h1 className="text-2xl font-bold text-white">{activeWk.topic}</h1>
-                </div>
-                <div className="ml-auto">
-                   <button onClick={() => setShowPModal(true)}
-                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 shadow-[0_0_16px_rgba(99,102,241,0.3)] transition-all">
-                     <Plus size={16} /> New Project
-                   </button>
-                </div>
+            <GlassPanel className="relative overflow-hidden flex flex-col min-h-[420px]">
+              <div className="absolute inset-0 z-0 pointer-events-none opacity-40">
+                <GradientDots backgroundColor="transparent" />
               </div>
-
-              <div className="flex-1 rounded-3xl border border-white/10 bg-[#0c0c0c] relative overflow-hidden flex flex-col shadow-2xl">
-                <div className="absolute inset-0 z-0 pointer-events-none opacity-40">
-                  <GradientDots backgroundColor="#0c0c0c" />
-                </div>
-                <div className="flex-1 overflow-y-auto p-6 relative z-10">
+              <div className="flex-1 overflow-y-auto p-6 relative z-10">
                   {activeWk.projects.length === 0 ? (
                     <div className="flex-1 flex flex-col items-center justify-center gap-4 border border-dashed border-white/10 rounded-3xl bg-white/[0.01] h-full">
                        <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
@@ -455,23 +419,14 @@ export default function VirtualStudyPage() {
                       ))}
                     </div>
                   )}
-                </div>
               </div>
-            </div>
+            </GlassPanel>
           )}
 
-          {/* LEVEL 3: ACTIVE PROJECT (VIRTUAL STUDY ROOM) */}
           {activeWk && activeProj && (
-            <div className="h-full flex flex-col">
-              {/* Header */}
-              <div className="flex items-center justify-between shrink-0 mb-4 bg-[#0a0a0a] border border-white/10 px-4 py-3 rounded-2xl">
-                 <div className="flex items-center gap-3">
-                   <button onClick={() => setActiveProj(null)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
-                     <ArrowLeft size={16} className="text-gray-300" />
-                   </button>
-                   <div className="h-4 w-px bg-white/10" />
-                   <h2 className="text-white font-semibold text-sm">{activeProj.topic}</h2>
-                 </div>
+            <div className="h-full flex flex-col min-h-[70vh]">
+              <div className="flex items-center justify-between shrink-0 mb-4 bg-white/[0.03] border border-white/[0.08] px-4 py-3 rounded-2xl">
+                 <p className="text-white font-semibold text-sm truncate">{activeProj.topic}</p>
                  <div className="flex items-center gap-4">
                    {saved && <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-medium"><Check size={10} /> Saved</span>}
                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold tracking-widest font-mono">
@@ -631,10 +586,9 @@ export default function VirtualStudyPage() {
             </div>
           )}
         </div>
-      </main>
 
       {showWModal && <WorkspaceModal onCancel={() => setShowWModal(false)} onSave={addWorkspace} />}
       {showPModal && <ProjectModal onCancel={() => setShowPModal(false)} onSave={addProject} />}
-    </div>
+    </PageShell>
   )
 }

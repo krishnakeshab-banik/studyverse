@@ -1,367 +1,276 @@
 "use client"
 
-import React, { useState, useEffect } from 'react';
-import { BookOpen, Brain, ShoppingBag, CalendarDays, MessageSquare, ChevronRight } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import React, { useRef } from "react"
+import { motion, useInView } from "framer-motion"
+import {
+  BookOpen, Brain, ShoppingBag, CalendarDays, MessageSquare, FolderGit2,
+  ChevronRight, Users, Zap, Shield, Sparkles, ArrowUpRight,
+} from "lucide-react"
 
 const features = [
   {
-    title: "Library",
-    description: "Store & organize study resources",
-    gradient: "linear-gradient(160deg, #0a1628 0%, #0f2247 50%, #0a1628 100%)",
-    glow: "rgba(59, 130, 246, 0.35)",
-    accentColor: "#3b82f6",
-    patternColor: "rgba(59,130,246,0.07)",
     icon: BookOpen,
-    fullDescription: "Notes, PDFs, PPTs & websites — all in one organized place with AI assistance.",
+    title: "Smart Library",
+    tag: "Organise",
+    description: "Centralise notes, PDFs, PPTs, websites and videos. AI summaries on demand.",
+    color: "#6366f1",
+    span: "md:col-span-2 md:row-span-2",
+    large: true,
   },
   {
-    title: "Virtual Study",
-    description: "AI-powered learning workspaces",
-    gradient: "linear-gradient(160deg, #100820 0%, #1e0f3d 50%, #100820 100%)",
-    glow: "rgba(139, 92, 246, 0.35)",
-    accentColor: "#8b5cf6",
-    patternColor: "rgba(139,92,246,0.07)",
     icon: Brain,
-    fullDescription: "Watch YouTube, get AI summaries, take notes and track study time.",
+    title: "Virtual Study",
+    tag: "Focus",
+    description: "Distraction-free workspaces with YouTube, AI notes, flashcards and timers.",
+    color: "#8b5cf6",
+    span: "",
+    large: false,
   },
   {
-    title: "Marketplace",
-    description: "Discover community resources",
-    gradient: "linear-gradient(160deg, #071a10 0%, #0d3320 50%, #071a10 100%)",
-    glow: "rgba(16, 185, 129, 0.35)",
-    accentColor: "#10b981",
-    patternColor: "rgba(16,185,129,0.07)",
     icon: ShoppingBag,
-    fullDescription: "Browse and add curated resources from the community, sorted by subject.",
+    title: "Marketplace",
+    tag: "Discover",
+    description: "Curated study packs from peers. Filter by subject or rating.",
+    color: "#06b6d4",
+    span: "",
+    large: false,
   },
   {
-    title: "Calendar",
-    description: "Plan your study schedule",
-    gradient: "linear-gradient(160deg, #1a1000 0%, #3d2600 50%, #1a1000 100%)",
-    glow: "rgba(245, 158, 11, 0.35)",
-    accentColor: "#f59e0b",
-    patternColor: "rgba(245,158,11,0.07)",
     icon: CalendarDays,
-    fullDescription: "Set study sessions and get email & push reminders to stay on track.",
+    title: "Study Calendar",
+    tag: "Plan",
+    description: "Schedule sessions and get smart reminders before every deadline.",
+    color: "#10b981",
+    span: "",
+    large: false,
   },
   {
-    title: "Post Doubts",
-    description: "Peer learning & AI help",
-    gradient: "linear-gradient(160deg, #1a0510 0%, #3d0f22 50%, #1a0510 100%)",
-    glow: "rgba(244, 63, 94, 0.35)",
-    accentColor: "#f43f5e",
-    patternColor: "rgba(244,63,94,0.07)",
     icon: MessageSquare,
-    fullDescription: "Post questions publicly, get peer answers and AI assistance fast.",
+    title: "Doubt Forum",
+    tag: "Ask",
+    description: "Post questions, get peer answers and AI help in seconds.",
+    color: "#f43f5e",
+    span: "",
+    large: false,
   },
-];
+  {
+    icon: FolderGit2,
+    title: "Projects Hub",
+    tag: "Build",
+    description: "Manage academic projects with boards, files and collaboration.",
+    color: "#f59e0b",
+    span: "md:col-span-2",
+    large: false,
+  },
+]
+
+const pillars = [
+  { icon: Zap, label: "AI-Powered", desc: "Summaries, Q&A and recommendations built in." },
+  { icon: Users, label: "Community", desc: "Learn together with classmates worldwide." },
+  { icon: Shield, label: "Private", desc: "Your data stays yours. No ads, ever." },
+]
+
+const stats = [
+  { value: "50K+", label: "Students" },
+  { value: "200K+", label: "Resources" },
+  { value: "6", label: "Tools" },
+  { value: "24/7", label: "AI help" },
+]
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 28 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, delay: i * 0.08, ease: [0.25, 0.46, 0.45, 0.94] as const },
+  }),
+}
+
+function FeatureCard({ f, index }: { f: typeof features[0]; index: number }) {
+  const Icon = f.icon
+  return (
+    <motion.div
+      custom={index}
+      variants={fadeUp}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-40px" }}
+      className={`group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-md transition-all duration-500 hover:border-white/[0.14] hover:bg-white/[0.05] ${f.span} ${f.large ? "p-8 min-h-[280px]" : "p-6"}`}
+    >
+      {/* Corner gradient wash */}
+      <div
+        className="absolute -top-12 -right-12 w-40 h-40 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
+        style={{ background: `${f.color}22` }}
+      />
+      {/* Top accent line */}
+      <div
+        className="absolute top-0 left-6 right-6 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+        style={{ background: `linear-gradient(90deg, transparent, ${f.color}88, transparent)` }}
+      />
+
+      <div className="relative z-10 flex flex-col h-full">
+        <div className="flex items-start justify-between mb-5">
+          <div
+            className="w-11 h-11 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110"
+            style={{ background: `${f.color}18`, border: `1px solid ${f.color}35`, boxShadow: `0 0 24px ${f.color}15` }}
+          >
+            <Icon size={20} style={{ color: f.color }} />
+          </div>
+          <span
+            className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full border"
+            style={{ color: f.color, borderColor: `${f.color}30`, background: `${f.color}10` }}
+          >
+            {f.tag}
+          </span>
+        </div>
+
+        <h3 className={`font-bold text-white mb-2 ${f.large ? "text-2xl" : "text-base"}`}>{f.title}</h3>
+        <p className={`text-white/40 leading-relaxed flex-1 ${f.large ? "text-sm max-w-sm" : "text-[13px]"}`}>
+          {f.description}
+        </p>
+
+        {f.large && (
+          <div className="mt-6 flex items-center gap-2 text-xs font-medium text-white/30 group-hover:text-white/60 transition-colors">
+            <Sparkles size={13} style={{ color: f.color }} />
+            <span>Included free with every account</span>
+            <ArrowUpRight size={13} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+        )}
+      </div>
+    </motion.div>
+  )
+}
 
 const InteractiveSelector = () => {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [animatedOptions, setAnimatedOptions] = useState<number[]>([]);
-  const [visitedIndices, setVisitedIndices] = useState<Set<number>>(new Set([0]));
-  const router = useRouter();
-
-  const handleOptionClick = (index: number) => {
-    setActiveIndex(index);
-    setVisitedIndices((prev) => new Set([...prev, index]));
-  };
-
-  useEffect(() => {
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    features.forEach((_, i) => {
-      const timer = setTimeout(() => {
-        setAnimatedOptions((prev) => [...prev, i]);
-      }, 180 * i);
-      timers.push(timer);
-    });
-    return () => timers.forEach((t) => clearTimeout(t));
-  }, []);
-
-  const allVisited = visitedIndices.size === features.length;
+  const ref = useRef(null)
+  const inView = useInView(ref, { once: true, margin: "-80px" })
+  const scrollToSignIn = () =>
+    document.getElementById("signin-section")?.scrollIntoView({ behavior: "smooth" })
 
   return (
-    <div className="relative flex flex-col items-center justify-center min-h-screen bg-[#080808] font-sans text-white overflow-hidden">
+    <section id="about" ref={ref} className="relative bg-black text-white overflow-hidden">
 
-      {/* Subtle top ambient light */}
+      {/* Dot grid — echoes sign-in canvas */}
       <div
+        className="absolute inset-0 pointer-events-none opacity-[0.35]"
         style={{
-          position: 'absolute',
-          top: 0,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: 600,
-          height: 300,
-          background: 'radial-gradient(ellipse at center, rgba(99,102,241,0.08) 0%, transparent 70%)',
-          pointerEvents: 'none',
+          backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.12) 1px, transparent 1px)",
+          backgroundSize: "28px 28px",
+          maskImage: "radial-gradient(ellipse 80% 60% at 50% 40%, black 20%, transparent 80%)",
         }}
       />
 
-      {/* Header */}
-      <div className="w-full max-w-2xl px-6 mt-10 mb-10 text-center z-10">
-        <h1
-          className="text-4xl md:text-5xl font-extrabold mb-4 tracking-tight"
-          style={{
-            background: 'linear-gradient(to bottom, #ffffff, #9ca3af)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            animation: 'fadeInFromTop 0.8s ease-in-out 0.3s both',
-          }}
+      {/* Ambient glows */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] pointer-events-none"
+        style={{ background: "radial-gradient(ellipse, rgba(99,102,241,0.08) 0%, transparent 70%)" }} />
+      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] pointer-events-none"
+        style={{ background: "radial-gradient(circle, rgba(139,92,246,0.06) 0%, transparent 70%)" }} />
+
+      {/* Seam from sign-in section above */}
+      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
+      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
+
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16 sm:mb-20"
         >
-          Everything You Need
-        </h1>
-        <p
-          className="text-lg md:text-xl text-gray-500 font-medium max-w-xl mx-auto"
-          style={{ animation: 'fadeInFromTop 0.8s ease-in-out 0.6s both', opacity: 0 }}
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm text-white/50 text-[11px] font-semibold tracking-wide mb-6">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            Why StudyVerse
+          </div>
+
+          <h2 className="text-3xl sm:text-4xl md:text-[3.25rem] font-extrabold tracking-tight leading-[1.1] mb-5">
+            <span className="text-white">Everything you need</span>
+            <br />
+            <span style={{
+              background: "linear-gradient(135deg, #ffffff 0%, #a5b4fc 50%, #818cf8 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}>
+              to study smarter
+            </span>
+          </h2>
+
+          <p className="text-white/40 text-sm sm:text-base max-w-lg mx-auto leading-relaxed">
+            One platform that replaces six apps — built for students who want real results, not more noise.
+          </p>
+        </motion.div>
+
+        {/* Bento feature grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mb-16 sm:mb-20 auto-rows-fr">
+          {features.map((f, i) => (
+            <FeatureCard key={f.title} f={f} index={i} />
+          ))}
+        </div>
+
+        {/* Pillars — horizontal glass strip */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="grid grid-cols-1 sm:grid-cols-3 gap-px rounded-2xl overflow-hidden border border-white/[0.08] bg-white/[0.04] backdrop-blur-md mb-16 sm:mb-20"
         >
-          Explore all the tools that make <span className="text-gray-300 font-semibold">StudyVerse</span> your ultimate learning companion.
-        </p>
-      </div>
-
-      {/* Options Container */}
-      <div
-        className="z-10"
-        style={{
-          display: 'flex',
-          width: '100%',
-          maxWidth: 920,
-          minWidth: 300,
-          height: 420,
-          padding: '0 16px',
-          boxSizing: 'border-box',
-          gap: 4,
-        }}
-      >
-        {features.map((feature, index) => {
-          const Icon = feature.icon;
-          const isActive = activeIndex === index;
-          const isVisited = visitedIndices.has(index);
-
-          return (
-            <div
-              key={index}
-              onClick={() => handleOptionClick(index)}
-              style={{
-                position: 'relative',
-                overflow: 'hidden',
-                borderRadius: 16,
-                background: feature.gradient,
-                opacity: animatedOptions.includes(index) ? 1 : 0,
-                transform: animatedOptions.includes(index) ? 'translateX(0)' : 'translateX(-60px)',
-                transition: 'flex 0.65s cubic-bezier(0.4,0,0.2,1), opacity 0.45s ease, transform 0.45s ease, box-shadow 0.4s ease, border-color 0.4s ease',
-                flex: isActive ? '7 1 0%' : '1 1 0%',
-                minWidth: 56,
-                borderWidth: 1.5,
-                borderStyle: 'solid',
-                borderColor: isActive ? feature.accentColor : isVisited ? 'rgba(255,255,255,0.08)' : '#1f1f1f',
-                boxShadow: isActive
-                  ? `0 0 40px ${feature.glow}, 0 20px 60px rgba(0,0,0,0.5)`
-                  : '0 8px 24px rgba(0,0,0,0.4)',
-                cursor: 'pointer',
-              }}
-            >
-              {/* Background pattern dots */}
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  backgroundImage: `radial-gradient(circle, ${feature.patternColor} 1.5px, transparent 1.5px)`,
-                  backgroundSize: '24px 24px',
-                  opacity: isActive ? 1 : 0.4,
-                  transition: 'opacity 0.6s ease',
-                }}
-              />
-
-              {/* Active glow radial */}
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  background: `radial-gradient(ellipse at 50% 110%, ${feature.glow} 0%, transparent 65%)`,
-                  opacity: isActive ? 1 : 0,
-                  transition: 'opacity 0.6s ease',
-                  pointerEvents: 'none',
-                }}
-              />
-
-              {/* Top accent line when active */}
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: '20%',
-                  right: '20%',
-                  height: 2,
-                  borderRadius: 99,
-                  background: feature.accentColor,
-                  opacity: isActive ? 0.8 : 0,
-                  transition: 'opacity 0.5s ease',
-                }}
-              />
-
-              {/* Bottom gradient fade */}
-              <div
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  bottom: isActive ? 0 : -48,
-                  height: 140,
-                  background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)',
-                  transition: 'bottom 0.65s ease',
-                  pointerEvents: 'none',
-                }}
-              />
-
-              {/* Visited checkmark badge */}
-              {isVisited && !isActive && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 10,
-                    right: 10,
-                    width: 18,
-                    height: 18,
-                    borderRadius: '50%',
-                    background: feature.accentColor,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    opacity: 0.9,
-                  }}
-                >
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                    <path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+          {pillars.map((p) => {
+            const Icon = p.icon
+            return (
+              <div key={p.label} className="flex flex-col items-center text-center p-6 sm:p-8 bg-black/40 hover:bg-white/[0.03] transition-colors">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
+                  style={{ background: "linear-gradient(135deg,rgba(99,102,241,0.2),rgba(139,92,246,0.15))", border: "1px solid rgba(99,102,241,0.25)" }}>
+                  <Icon size={18} className="text-indigo-400" />
                 </div>
-              )}
-
-              {/* Label row */}
-              <div
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  bottom: 18,
-                  display: 'flex',
-                  alignItems: 'center',
-                  zIndex: 3,
-                  padding: '0 14px',
-                  gap: 12,
-                }}
-              >
-                {/* Icon circle */}
-                <div
-                  style={{
-                    minWidth: 42,
-                    width: 42,
-                    height: 42,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '50%',
-                    background: 'rgba(10,10,10,0.75)',
-                    border: `1.5px solid ${isActive ? feature.accentColor : 'rgba(255,255,255,0.12)'}`,
-                    backdropFilter: 'blur(12px)',
-                    flexShrink: 0,
-                    transition: 'border-color 0.4s ease',
-                    boxShadow: isActive ? `0 0 12px ${feature.glow}` : 'none',
-                  }}
-                >
-                  <Icon size={20} color={isActive ? feature.accentColor : '#9ca3af'} style={{ transition: 'color 0.4s ease' }} />
-                </div>
-
-                {/* Text */}
-                <div style={{ overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                  <div
-                    style={{
-                      fontWeight: 700,
-                      fontSize: '1rem',
-                      color: '#ffffff',
-                      opacity: isActive ? 1 : 0,
-                      transform: isActive ? 'translateX(0)' : 'translateX(20px)',
-                      transition: 'opacity 0.6s ease, transform 0.6s ease',
-                    }}
-                  >
-                    {feature.title}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '0.8rem',
-                      color: '#9ca3af',
-                      opacity: isActive ? 1 : 0,
-                      transform: isActive ? 'translateX(0)' : 'translateX(20px)',
-                      transition: 'opacity 0.6s ease 0.06s, transform 0.6s ease 0.06s',
-                      marginTop: 2,
-                    }}
-                  >
-                    {feature.fullDescription}
-                  </div>
-                </div>
+                <h3 className="text-sm font-bold text-white/90 mb-1.5">{p.label}</h3>
+                <p className="text-white/35 text-xs leading-relaxed max-w-[200px]">{p.desc}</p>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            )
+          })}
+        </motion.div>
 
-      {/* Progress indicators */}
-      <div className="flex gap-2 mt-6 z-10">
-        {features.map((f, i) => (
-          <div
-            key={i}
-            onClick={() => handleOptionClick(i)}
-            style={{
-              width: visitedIndices.has(i) ? 20 : 6,
-              height: 6,
-              borderRadius: 99,
-              background: activeIndex === i ? f.accentColor : visitedIndices.has(i) ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.12)',
-              transition: 'all 0.4s ease',
-              cursor: 'pointer',
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Continue button */}
-      <div
-        style={{
-          marginTop: 12,
-          opacity: allVisited ? 1 : 0,
-          transform: allVisited ? 'translateY(0) scale(1)' : 'translateY(14px) scale(0.95)',
-          transition: 'opacity 0.6s ease, transform 0.6s ease',
-          pointerEvents: allVisited ? 'auto' : 'none',
-        }}
-      >
-        <button
-          onClick={() => router.push('/auth')}
-          className="flex items-center gap-2 px-8 py-3 rounded-full font-semibold text-base text-white"
-          style={{
-            background: 'linear-gradient(to right, #6366f1, #8b5cf6)',
-            boxShadow: '0 0 28px rgba(99,102,241,0.45), 0 4px 20px rgba(0,0,0,0.4)',
-            transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.04)';
-            (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 40px rgba(99,102,241,0.6), 0 4px 24px rgba(0,0,0,0.5)';
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)';
-            (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 28px rgba(99,102,241,0.45), 0 4px 20px rgba(0,0,0,0.4)';
-          }}
+        {/* Stats */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-16 sm:mb-20"
         >
-          Continue <ChevronRight size={18} />
-        </button>
+          {stats.map(({ value, label }) => (
+            <div key={label}
+              className="flex flex-col items-center py-6 sm:py-8 rounded-2xl border border-white/[0.07] bg-white/[0.025] backdrop-blur-sm hover:bg-white/[0.04] hover:border-white/[0.12] transition-all duration-300">
+              <span className="text-2xl sm:text-3xl font-extrabold bg-gradient-to-b from-white to-white/50 bg-clip-text text-transparent">
+                {value}
+              </span>
+              <span className="text-white/30 text-[11px] font-medium mt-1.5 uppercase tracking-wider">{label}</span>
+            </div>
+          ))}
+        </motion.div>
+
+        {/* CTA — matches sign-in card button */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.15 }}
+          className="text-center"
+        >
+          <div className="inline-flex flex-col items-center p-8 sm:p-10 rounded-3xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-md max-w-md mx-auto">
+            <p className="text-white/50 text-sm mb-1">Ready to transform how you study?</p>
+            <p className="text-white/25 text-xs mb-6">Join free — no credit card required</p>
+            <button
+              onClick={scrollToSignIn}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 h-12 rounded-xl text-sm font-semibold text-white transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] sv-btn-primary"
+            >
+              Get Started Free <ChevronRight size={16} />
+            </button>
+          </div>
+        </motion.div>
       </div>
+    </section>
+  )
+}
 
-      <style>{`
-        @keyframes fadeInFromTop {
-          from { opacity: 0; transform: translateY(-18px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
-    </div>
-  );
-};
-
-export default InteractiveSelector;
+export default InteractiveSelector

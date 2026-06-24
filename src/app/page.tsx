@@ -1,38 +1,39 @@
 "use client"
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { BackgroundCircles, COLOR_VARIANTS } from "@/components/ui/background-circles";
-import { HoverButton } from "@/components/ui/hover-button";
-
-const variants = Object.keys(COLOR_VARIANTS) as (keyof typeof COLOR_VARIANTS)[];
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { useAuth } from "@/context/AuthContext"
+import { SignInPage } from "@/components/ui/sign-in-flow-1"
+import InteractiveSelector from "@/components/ui/interactive-selector"
 
 export default function HomePage() {
-    const router = useRouter();
-    const [currentVariant, setCurrentVariant] =
-        useState<keyof typeof COLOR_VARIANTS>("octonary");
+  const { user, loading } = useAuth()
+  const router = useRouter()
 
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setCurrentVariant((prev) => {
-                const currentIndex = variants.indexOf(prev);
-                return variants[(currentIndex + 1) % variants.length];
-            });
-        }, 5000);
+  useEffect(() => {
+    if (!loading && user) router.push("/library")
+  }, [user, loading, router])
 
-        return () => clearInterval(interval);
-    }, []);
-
+  if (loading) {
     return (
-        <main className="relative min-h-screen">
-            <BackgroundCircles variant={currentVariant} />
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+      </div>
+    )
+  }
 
-            {/* CTA button centered below the hero text */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="mt-64 pointer-events-auto">
-                    <HoverButton onClick={() => router.push('/onboarding')}>Get Started</HoverButton>
-                </div>
-            </div>
-        </main>
-    );
+  if (user) return null
+
+  return (
+    <main className="bg-black">
+      {/* Hero — full screen sign-in with canvas animation */}
+      <SignInPage />
+
+      {/* Subtle section divider */}
+      <div className="relative h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
+      {/* About & Features */}
+      <InteractiveSelector />
+    </main>
+  )
 }

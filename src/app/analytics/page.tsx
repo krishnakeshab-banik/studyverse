@@ -1,32 +1,16 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import Link from "next/link"
-import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
-import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar"
-import { GradientDots } from "@/components/ui/gradient-dots"
+import { PageShell, StatCard } from "@/components/ui/page-shell"
 import {
-  BookOpen, Brain, ShoppingBag, CalendarDays, MessageSquare, LogOut, User,
-  Activity, ExternalLink, RefreshCw, AlertTriangle, CheckCircle2, Monitor, Map, FolderGit2
+  Activity, ExternalLink, RefreshCw, AlertTriangle, CheckCircle2, Monitor, Map, BarChart3,
 } from "lucide-react"
-
-// ─── Sidebar Helpers ────────────────────────────────────────
-const navLinks = [
-  { label: "Library",       href: "/library",     icon: <BookOpen      size={24} className="text-neutral-400 flex-shrink-0" /> },
-  { label: "Virtual Study", href: "/study",       icon: <Brain         size={24} className="text-neutral-400 flex-shrink-0" /> },
-  { label: "Marketplace",   href: "/marketplace", icon: <ShoppingBag   size={24} className="text-neutral-400 flex-shrink-0" /> },
-  { label: "Calendar",      href: "/calendar",    icon: <CalendarDays  size={24} className="text-neutral-400 flex-shrink-0" /> },
-  { label: "Projects",      href: "/projects",    icon: <FolderGit2    size={24} className="text-neutral-400 flex-shrink-0" /> },
-  { label: "Post Doubts",   href: "/doubts",      icon: <MessageSquare size={24} className="text-neutral-400 flex-shrink-0" /> },
-  { label: "Analytics",     href: "/analytics",   icon: <Activity      size={24} className="text-indigo-400 flex-shrink-0" /> },
-]
 
 const PROD_DOMAINS = ["github.com", "stackoverflow.com", "wikipedia.org", "localhost", "127.0.0.1", "khanacademy.org", "coursera.org", "docs.google.com"]
 const DIST_DOMAINS = ["youtube.com", "facebook.com", "instagram.com", "twitter.com", "reddit.com", "tiktok.com", "netflix.com", "twitch.tv", "discord.com"]
 
 export default function AnalyticsPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [extInstalled, setExtInstalled] = useState(false)
   const [data, setData] = useState<Record<string, number> | null>(null)
   const [loading, setLoading] = useState(true)
@@ -99,146 +83,85 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="flex h-screen w-full bg-[#080808] overflow-hidden font-sans">
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen}>
-        <SidebarBody className="justify-between gap-10" style={{ background: "#0d0d0d", borderRight: "1px solid rgba(255,255,255,0.06)" }}>
-          <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
-            <Link href="/" className="flex items-center gap-3 py-1 z-20">
-               <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)", boxShadow: "0 0 16px rgba(99,102,241,0.4)" }}>
-                 <BookOpen size={20} className="text-white" />
-               </div>
-               <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="font-bold text-white text-lg tracking-tight whitespace-pre">StudyVerse</motion.span>
-            </Link>
-            <div className="mt-8 flex flex-col gap-0.5">
-               {navLinks.map((link, i) => <SidebarLink key={i} link={link} className="hover:bg-white/5 rounded-lg px-2 transition-colors py-3" />)}
+    <PageShell
+      title="Analytics Tracker"
+      subtitle="Monitor web usage to control distractions during study"
+      icon={BarChart3}
+      iconAccent="#6366f1"
+      action={extInstalled ? (
+        <button onClick={requestData} className="flex items-center gap-2 px-4 h-11 rounded-xl text-xs font-semibold text-white bg-white/5 border border-white/10 hover:bg-white/10 backdrop-blur-sm transition-all">
+          <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
+        </button>
+      ) : undefined}
+      noPadding
+      contentClassName="p-4 sm:p-6"
+    >
+      {!extInstalled ? (
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-white/[0.03] border border-red-500/20 rounded-2xl p-6 sm:p-8 backdrop-blur-md relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-orange-500" />
+            <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center mb-5 border border-red-500/20">
+              <AlertTriangle size={28} className="text-red-400" />
             </div>
+            <h2 className="text-xl font-bold text-white mb-3">Browser Extension Required</h2>
+            <p className="text-gray-400 leading-relaxed mb-6 text-sm">
+              Install the <strong className="text-white">StudyVerse Analytics Extension</strong> from your project&apos;s <code className="text-indigo-400">extension</code> folder to monitor browsing activity.
+            </p>
+            <div className="bg-black/40 border border-white/10 rounded-xl p-5 mb-6 text-sm leading-7 text-gray-300">
+              <ol className="list-decimal pl-5 marker:text-indigo-400 space-y-1">
+                <li>Open <strong>chrome://extensions/</strong></li>
+                <li>Enable <strong>Developer mode</strong></li>
+                <li>Click <strong>Load unpacked</strong></li>
+                <li>Select the <strong>StudyVerse/extension</strong> folder</li>
+              </ol>
+            </div>
+            <button onClick={requestData} className="flex items-center gap-2 px-5 h-11 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-all">
+              <RefreshCw size={16} className={loading && !data ? "animate-spin" : ""} /> Check Connection
+            </button>
           </div>
-          <div className="flex flex-col gap-0.5 pb-2">
-             <div className="border-t border-white/[0.06] mb-2" />
-             <SidebarLink link={{ label: "Profile", href: "/profile",
-               icon: <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0" style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)" }}><User size={16} /></div>
-             }} className="bg-white/[0.06] rounded-lg px-2" />
-             <SidebarLink link={{ label: "Logout", href: "/", icon: <LogOut size={22} className="text-red-400 flex-shrink-0 ml-0.5" /> }} className="hover:bg-red-500/10 rounded-lg px-2 transition-colors" />
-           </div>
-        </SidebarBody>
-      </Sidebar>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <StatCard icon={CheckCircle2} label="Focused time" value={formatTime(prodTime)} accent="#10b981" />
+            <StatCard icon={AlertTriangle} label="Distractions" value={formatTime(distTime)} accent="#f43f5e" />
+            <StatCard icon={Monitor} label="Total monitored" value={formatTime(totalTime)} accent="#6366f1" />
+          </div>
 
-      <main className="flex-1 overflow-hidden flex flex-col relative z-0">
-        <div className="px-6 pt-6 shrink-0 relative z-10 w-full mb-8">
-           <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent relative top-1">Analytics Tracker</h1>
-                <p className="text-gray-500 text-sm mt-1">Monitor web usage to control distractions during StudyVerse workflows.</p>
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-sm p-5 sm:p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <Map size={20} className="text-indigo-400" />
+              <h2 className="text-lg font-bold text-white">Website Activity Map</h2>
+            </div>
+            {sortedDomains.length === 0 ? (
+              <div className="py-16 flex flex-col items-center justify-center text-center">
+                <Activity size={36} className="text-gray-700 mb-3" />
+                <p className="text-gray-400 font-bold mb-1">No browsing data logged yet</p>
+                <p className="text-gray-600 text-sm">Browse actively to see data appear here.</p>
               </div>
-              {extInstalled && (
-                <button onClick={requestData} className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-white/5 border border-white/10 hover:bg-white/10 transition-all">
-                  <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
-                </button>
-              )}
-           </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {sortedDomains.map(({ domain, ms }) => {
+                  const pct = totalTime > 0 ? (ms / totalTime) * 100 : 0
+                  return (
+                    <div key={domain} className="flex flex-col gap-2">
+                      <div className="flex items-center justify-between text-sm gap-2">
+                        <span className="text-white font-medium flex items-center gap-2 truncate">
+                          <ExternalLink size={13} className="text-gray-600 shrink-0" /> {domain}
+                        </span>
+                        <span className="text-gray-400 font-bold shrink-0">{formatTime(ms)}</span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden">
+                        <div className={cn("h-full rounded-full transition-all duration-1000", getCatColor(domain))} style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </div>
-
-        <div className="flex-1 px-6 pb-6 relative z-10 w-full overflow-y-auto">
-           
-           {!extInstalled ? (
-             <div className="max-w-3xl mx-auto flex flex-col gap-8">
-               <div className="bg-[#0a0a0a] border border-red-500/20 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-orange-500" />
-                  
-                  <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mb-6">
-                     <AlertTriangle size={32} className="text-red-400" />
-                  </div>
-                  
-                  <h2 className="text-2xl font-bold text-white mb-3">Browser Extension Required</h2>
-                  <p className="text-gray-400 leading-relaxed mb-6">
-                    To actively monitor your web distractions while learning, you need to install the custom <strong>StudyVerse Analytics Extension</strong> built directly into your project files. It works entirely offline and communicates directly with this dashboard securely.
-                  </p>
-                  
-                  <div className="bg-[#0f0f0f] border border-white/10 rounded-2xl p-6 mb-6 font-mono text-sm leading-8 text-gray-300">
-                    <ol className="list-decimal pl-5 marker:text-indigo-400">
-                      <li>Open a new tab and go to <strong>chrome://extensions/</strong></li>
-                      <li>Toggle <strong>"Developer mode"</strong> ON (top right corner).</li>
-                      <li>Click <strong>"Load unpacked"</strong> (top left).</li>
-                      <li>Select the <strong>StudyVerse/extension</strong> folder located in your local project directory.</li>
-                      <li>Come back to this page and it will sync automatically!</li>
-                    </ol>
-                  </div>
-                  
-                  <button onClick={requestData} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/20 w-fit">
-                    <RefreshCw size={16} className={loading && !data ? "animate-spin" : ""} /> I have installed it — Check Connection
-                  </button>
-               </div>
-             </div>
-           ) : (
-             <div className="max-w-5xl mx-auto flex flex-col gap-6 w-full">
-               
-               {/* Summary Cards */}
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                  <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-6 shadow-xl relative overflow-hidden group">
-                     <div className="absolute top-4 right-4 text-emerald-500 opacity-20 group-hover:opacity-40 transition-opacity"><CheckCircle2 size={40} /></div>
-                     <p className="text-xs font-bold text-gray-500 tracking-wider uppercase mb-2">Focused Time</p>
-                     <p className="text-3xl font-bold text-emerald-400 mb-1">{formatTime(prodTime)}</p>
-                     <p className="text-xs text-emerald-500/70">Time spent on known learning tools</p>
-                  </div>
-                  <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-6 shadow-xl relative overflow-hidden group">
-                     <div className="absolute top-4 right-4 text-rose-500 opacity-20 group-hover:opacity-40 transition-opacity"><AlertTriangle size={40} /></div>
-                     <p className="text-xs font-bold text-gray-500 tracking-wider uppercase mb-2">Distractions</p>
-                     <p className="text-3xl font-bold text-rose-400 mb-1">{formatTime(distTime)}</p>
-                     <p className="text-xs text-rose-500/70">Time spent on entertainment/socials</p>
-                  </div>
-                  <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-6 shadow-xl relative overflow-hidden group">
-                     <div className="absolute top-4 right-4 text-indigo-500 opacity-20 group-hover:opacity-40 transition-opacity"><Monitor size={40} /></div>
-                     <p className="text-xs font-bold text-gray-500 tracking-wider uppercase mb-2">Total Monitored</p>
-                     <p className="text-3xl font-bold text-white mb-1">{formatTime(totalTime)}</p>
-                     <p className="text-xs text-gray-600">Total active browsing duration</p>
-                  </div>
-               </div>
-
-               {/* Detailed Breakdown */}
-               <div className="flex-1 rounded-3xl border border-white/10 bg-[#0c0c0c] relative overflow-hidden flex flex-col shadow-2xl p-6">
-                  <div className="absolute inset-0 z-0 pointer-events-none opacity-20">
-                     <GradientDots backgroundColor="#0c0c0c" />
-                  </div>
-                  <div className="relative z-10 w-full h-full">
-                     <div className="flex items-center gap-3 mb-8">
-                       <Map size={24} className="text-indigo-400" />
-                       <h2 className="text-xl font-bold text-white tracking-wide">Website Activity Map</h2>
-                     </div>
-                     
-                     {sortedDomains.length === 0 ? (
-                       <div className="py-20 flex flex-col items-center justify-center text-center">
-                         <Activity size={40} className="text-gray-700 mb-3" />
-                         <p className="text-gray-400 font-bold mb-1">No browsing data logged yet.</p>
-                         <p className="text-gray-600 text-sm">Keep this page open and start browsing actively to see data.</p>
-                       </div>
-                     ) : (
-                       <div className="flex flex-col gap-5">
-                         {sortedDomains.map(({ domain, ms }) => {
-                           const pct = totalTime > 0 ? (ms / totalTime) * 100 : 0
-                           return (
-                             <div key={domain} className="flex flex-col gap-2">
-                               <div className="flex items-center justify-between text-sm">
-                                  <span className="text-white font-medium flex items-center gap-2">
-                                     <ExternalLink size={14} className="text-gray-600" /> {domain}
-                                  </span>
-                                  <span className="text-gray-400 font-bold tracking-wide">{formatTime(ms)}</span>
-                               </div>
-                               <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden">
-                                  <div className={cn("h-full rounded-full transition-all duration-1000 ease-out", getCatColor(domain))} style={{ width: `${pct}%` }} />
-                               </div>
-                             </div>
-                           )
-                         })}
-                       </div>
-                     )}
-                  </div>
-               </div>
-               
-             </div>
-           )}
-
-        </div>
-      </main>
-    </div>
+      )}
+    </PageShell>
   )
 }

@@ -1,14 +1,16 @@
-import * as admin from "firebase-admin";
+import { initializeApp, getApps, getApp, cert } from "firebase-admin/app";
+import { getFirestore, FieldValue, Firestore } from "firebase-admin/firestore";
 
-if (!admin.apps.length) {
+let app;
+if (!getApps().length) {
   try {
     const privateKey = process.env.FIREBASE_PRIVATE_KEY;
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
     const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 
     if (privateKey && clientEmail) {
-      admin.initializeApp({
-        credential: admin.credential.cert({
+      app = initializeApp({
+        credential: cert({
           projectId,
           clientEmail,
           privateKey: privateKey.replace(/\\n/g, "\n"),
@@ -16,8 +18,7 @@ if (!admin.apps.length) {
       });
       console.log("Firebase Admin SDK initialized successfully using Service Account.");
     } else {
-      // Graceful fallback for local emulator or environments with default application credentials
-      admin.initializeApp({
+      app = initializeApp({
         projectId,
       });
       console.log("Firebase Admin SDK initialized using Project ID fallback.");
@@ -25,15 +26,22 @@ if (!admin.apps.length) {
   } catch (error) {
     console.error("Failed to initialize Firebase Admin SDK:", error);
   }
+} else {
+  app = getApp();
 }
 
-let dbInstance: admin.firestore.Firestore | null = null;
+let dbInstance: Firestore | null = null;
 
-export function getAdminDb() {
+export function getAdminDb(): Firestore {
   if (!dbInstance) {
-    dbInstance = admin.firestore();
+    dbInstance = getFirestore();
   }
   return dbInstance;
 }
 
-export { admin };
+// For compatibility with v13 wildcard references:
+export const admin = {
+  firestore: {
+    FieldValue,
+  },
+};
