@@ -203,7 +203,7 @@ export function ProfileHeader({
           <span><strong className="text-white">{profile.following.length}</strong> <span className="text-gray-500">following</span></span>
         </div>
       </div>
-      {!isSelf && !profile.uid.startsWith("seed-") && (
+      {!isSelf && (
         <button
           onClick={onFollow}
           className={cn(

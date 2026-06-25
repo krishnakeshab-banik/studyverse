@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useRef } from "react"
-import { cn } from "@/lib/utils"
+import { useState, useRef, useEffect } from "react"
+import { createPortal } from "react-dom"
 import { Ban, MoreHorizontal, ShieldOff, X } from "lucide-react"
 
 interface BlockUserDialogProps {
@@ -75,32 +75,62 @@ interface ProfileMoreMenuProps {
 
 export function ProfileMoreMenu({ onBlock }: ProfileMoreMenuProps) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null)
+
+  useEffect(() => {
+    if (!open || !buttonRef.current) return
+
+    const updatePosition = () => {
+      const rect = buttonRef.current!.getBoundingClientRect()
+      const menuWidth = 168
+      const left = Math.min(
+        Math.max(8, rect.right - menuWidth),
+        window.innerWidth - menuWidth - 8,
+      )
+      setMenuPos({ top: rect.bottom + 6, left })
+    }
+
+    updatePosition()
+    window.addEventListener("scroll", updatePosition, true)
+    window.addEventListener("resize", updatePosition)
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true)
+      window.removeEventListener("resize", updatePosition)
+    }
+  }, [open])
 
   return (
-    <div className="relative" ref={ref}>
+    <>
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setOpen(v => !v)}
         className="w-10 h-10 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
         aria-label="More options"
+        aria-expanded={open}
       >
         <MoreHorizontal size={18} />
       </button>
-      {open && (
+
+      {open && typeof document !== "undefined" && createPortal(
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-1 z-50 min-w-[160px] rounded-xl border border-white/10 bg-[#121212] shadow-xl overflow-hidden py-1">
+          <div className="fixed inset-0 z-[90]" onClick={() => setOpen(false)} aria-hidden />
+          <div
+            className="fixed z-[91] min-w-[168px] rounded-xl border border-white/10 bg-[#121212] shadow-xl overflow-hidden py-1"
+            style={menuPos ? { top: menuPos.top, left: menuPos.left } : undefined}
+          >
             <button
               type="button"
               onClick={() => { setOpen(false); onBlock() }}
-              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors whitespace-nowrap"
             >
               <Ban size={14} /> Block user
             </button>
           </div>
-        </>
+        </>,
+        document.body,
       )}
-    </div>
+    </>
   )
 }

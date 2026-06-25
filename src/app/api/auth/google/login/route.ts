@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminDb, admin } from "@/backend/db/firebase-admin";
+import { googleOAuthErrorHtml } from "@/backend/google/oauth-error-page";
 import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
@@ -17,10 +18,14 @@ export async function GET(request: Request) {
     }
 
     const clientId = process.env.GOOGLE_CLIENT_ID;
-    if (!clientId) {
-      return NextResponse.json(
-        { success: false, error: "Google client ID not configured in environment" },
-        { status: 500 }
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    if (!clientId || !clientSecret || clientId.includes("your-google-client-id")) {
+      return new Response(
+        googleOAuthErrorHtml(
+          "Google Calendar not configured",
+          "Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.local from Google Cloud Console → APIs & Services → Credentials.",
+        ),
+        { status: 500, headers: { "Content-Type": "text/html" } },
       );
     }
 
@@ -28,7 +33,16 @@ export async function GET(request: Request) {
     const stateToken = crypto.randomUUID();
 
     // 2. Store state mapping in Firestore oauth_states collection
-    const adminDb = getAdminDb();
+    let adminDb;
+    try {
+      adminDb = getAdminDb();
+    } catch (adminError) {
+      const msg = adminError instanceof Error ? adminError.message : String(adminError);
+      return new Response(
+        googleOAuthErrorHtml("Server configuration required", msg),
+        { status: 503, headers: { "Content-Type": "text/html" } },
+      );
+    }
     await adminDb.collection("oauth_states").doc(stateToken).set({
       uid,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -50,11 +64,12 @@ export async function GET(request: Request) {
     authUrl.searchParams.set("state", stateToken);
 
     return NextResponse.redirect(authUrl.toString());
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Google Auth Login] Error:", error);
-    return NextResponse.json(
-      { success: false, error: error.message || String(error) },
-      { status: 500 }
+    const msg = error instanceof Error ? error.message : String(error);
+    return new Response(
+      googleOAuthErrorHtml("Connection failed", msg),
+      { status: 500, headers: { "Content-Type": "text/html" } },
     );
   }
 }

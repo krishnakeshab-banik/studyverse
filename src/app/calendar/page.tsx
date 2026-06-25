@@ -111,6 +111,10 @@ export default function CalendarPage() {
         setGoogleEmail(event.data.email)
         window.removeEventListener("message", handleMessage)
       }
+      if (event.data?.type === "GOOGLE_CALENDAR_ERROR") {
+        alert(event.data.error || "Failed to connect Google Calendar.")
+        window.removeEventListener("message", handleMessage)
+      }
     }
 
     window.removeEventListener("message", handleMessage)

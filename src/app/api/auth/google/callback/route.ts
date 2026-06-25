@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminDb, admin } from "@/backend/db/firebase-admin";
+import { googleOAuthErrorHtml } from "@/backend/google/oauth-error-page";
 
 export const dynamic = "force-dynamic";
 
@@ -8,15 +9,32 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const code = searchParams.get("code");
     const stateToken = searchParams.get("state");
+    const oauthError = searchParams.get("error");
 
-    if (!code || !stateToken) {
-      return NextResponse.json(
-        { success: false, error: "Missing code or state parameter" },
-        { status: 400 }
+    if (oauthError) {
+      return new Response(
+        googleOAuthErrorHtml("Google sign-in cancelled", "Connection was cancelled or denied."),
+        { status: 400, headers: { "Content-Type": "text/html" } },
       );
     }
 
-    const adminDb = getAdminDb();
+    if (!code || !stateToken) {
+      return new Response(
+        googleOAuthErrorHtml("Invalid callback", "Missing authorization code. Please try connecting again."),
+        { status: 400, headers: { "Content-Type": "text/html" } },
+      );
+    }
+
+    let adminDb;
+    try {
+      adminDb = getAdminDb();
+    } catch (adminError) {
+      const msg = adminError instanceof Error ? adminError.message : String(adminError);
+      return new Response(
+        googleOAuthErrorHtml("Server configuration required", msg),
+        { status: 503, headers: { "Content-Type": "text/html" } },
+      );
+    }
     const stateDocRef = adminDb.collection("oauth_states").doc(stateToken);
     const stateDoc = await stateDocRef.get();
 
@@ -172,11 +190,12 @@ export async function GET(request: Request) {
         "Content-Type": "text/html",
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Google Auth Callback] Error:", error);
-    return NextResponse.json(
-      { success: false, error: error.message || String(error) },
-      { status: 500 }
+    const msg = error instanceof Error ? error.message : String(error);
+    return new Response(
+      googleOAuthErrorHtml("Connection failed", msg),
+      { status: 500, headers: { "Content-Type": "text/html" } },
     );
   }
 }
