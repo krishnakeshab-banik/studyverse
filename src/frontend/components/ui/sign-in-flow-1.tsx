@@ -150,7 +150,7 @@ function TopNav() {
       </div>
 
       <nav className="hidden md:flex items-center gap-6">
-        {[["About", "about"], ["Features", "about"], ["Get Started", "signin-section"]].map(([label, id]) => (
+        {[["About", "about"], ["Features", "features"], ["Get Started", "signin-section"]].map(([label, id]) => (
           <button key={label} onClick={() => scroll(id)} className="text-xs font-medium text-white/50 hover:text-white/90 transition-colors tracking-wide">
             {label}
           </button>
