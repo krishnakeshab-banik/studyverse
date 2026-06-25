@@ -32,10 +32,23 @@ interface StudySession {
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
+const getLocalDateString = (d: Date = new Date()) => {
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, "0")
+  const dd = String(d.getDate()).padStart(2, "0")
+  return `${yyyy}-${mm}-${dd}`
+}
+
+const formatSelectedDate = (dateStr: string) => {
+  const [yyyy, mm, dd] = dateStr.split("-").map(Number)
+  const dateObj = new Date(yyyy, mm - 1, dd)
+  return dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
 export default function CalendarPage() {
   const { user } = useAuth()
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split("T")[0])
+  const [selectedDate, setSelectedDate] = useState<string>(getLocalDateString())
   
   const [sessions, setSessions] = useState<StudySession[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -318,7 +331,7 @@ export default function CalendarPage() {
   }
 
   const totalSessions = sessions.length
-  const todaySessions = sessions.filter(s => s.date === new Date().toISOString().split("T")[0]).length
+  const todaySessions = sessions.filter(s => s.date === getLocalDateString()).length
   const totalHours = sessions.reduce((a, s) => a + s.duration, 0)
 
   return (
@@ -415,7 +428,7 @@ export default function CalendarPage() {
                      <div>
                        <h3 className="text-white font-bold text-lg flex items-center gap-2">
                          <CalIcon size={18} className="text-indigo-400" /> 
-                         {selectedDate === new Date().toISOString().split("T")[0] ? "Today's Plan" : new Date(selectedDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric'})}
+                         {selectedDate === getLocalDateString() ? "Today's Plan" : formatSelectedDate(selectedDate)}
                        </h3>
                        <p className="text-gray-500 text-xs mt-1">{selectedSessions.length} session{selectedSessions.length !== 1 ? "s" : ""} scheduled</p>
                      </div>
