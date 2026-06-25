@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { PageShell } from "@/components/ui/page-shell"
@@ -12,13 +12,14 @@ import { LeetCodePanel } from "@/components/social/leetcode-panel"
 import { AccountSyncSettings } from "@/components/social/account-sync-settings"
 import { ProjectDetailModal } from "@/components/projects/project-feed"
 import { ensureStudyverseId } from "@/backend/social/user-id"
+import { unblockUser } from "@/backend/social/blocks"
 import { fetchProjectsByStudyverseId, toggleLike, toggleStar } from "@/backend/social/projects"
 import { fetchPostsByUid, createPost, togglePostLike, addPostComment } from "@/backend/social/posts"
 import type { GitHubStats, LeetCodeStats, SVPost, SVProject } from "@/backend/social/types"
 import {
   UserIcon, CheckCircle2, AlertCircle,
   Eye, EyeOff, Save, Pencil, X, Shield, Mail, Phone, GraduationCap,
-  ChevronDown, ChevronUp, LogOut, ExternalLink, type LucideIcon,
+  ChevronDown, ChevronUp, LogOut, ExternalLink, Camera, Lock, Instagram, Linkedin, type LucideIcon,
 } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
 import { getClientAuth, getClientDb } from "@/backend/db/firebase"
@@ -30,6 +31,7 @@ interface ProfileData {
   email: string; emailVerified: boolean
   phone: string; phoneVerified: boolean
   year: string; major: string; bio: string
+  instagram: string; linkedin: string
 }
 
 const VerifyBadge = ({ verified }: { verified: boolean }) =>
@@ -95,7 +97,14 @@ export default function ProfilePage() {
     email: "loading@email.com", emailVerified: false,
     phone: "", phoneVerified: false,
     year: "", major: "", bio: "",
+    instagram: "", linkedin: "",
   })
+  const [photoURL, setPhotoURL] = useState<string>("")
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [isPrivate, setIsPrivate] = useState(false)
+  const [blockedUsers, setBlockedUsers] = useState<string[]>([])
+  const photoInputRef = useRef<HTMLInputElement>(null)
   const [draft, setDraft] = useState<ProfileData>(profile)
   const [studyverseId, setStudyverseId] = useState("")
   const [copiedId, setCopiedId] = useState(false)
@@ -155,9 +164,14 @@ export default function ProfilePage() {
           year: (data.year as string) || "",
           major: (data.major as string) || "",
           bio: (data.bio as string) || "",
+          instagram: (data.instagram as string) || "",
+          linkedin: (data.linkedin as string) || "",
         }
         setProfile(pd)
         setDraft(pd)
+        setPhotoURL((data.photoURL as string) || user.photoURL || "")
+        setIsPrivate(!!data.isPrivate)
+        setBlockedUsers((data.blockedUsers as string[]) || [])
         setFollowers((data.followers as string[]) || [])
         setFollowing((data.following as string[]) || [])
         setGithubUsername(data.githubUsername as string | undefined)
@@ -183,17 +197,36 @@ export default function ProfilePage() {
   const handleSave = async () => {
     if (!user) return
     try {
+      let nextPhoto = photoURL
+      if (photoFile) {
+        const { uploadAvatar } = await import("@/backend/social/storage-upload")
+        nextPhoto = await uploadAvatar(user.uid, photoFile)
+        setPhotoURL(nextPhoto)
+        setPhotoFile(null)
+        setPhotoPreview(null)
+      }
       await updateDoc(doc(getClientDb(), "users", user.uid), {
         name: draft.name, college: draft.college, year: draft.year,
         major: draft.major, bio: draft.bio, phone: draft.phone,
+        instagram: draft.instagram.trim(), linkedin: draft.linkedin.trim(),
+        photoURL: nextPhoto, isPrivate,
       })
-      await updateProfile(user, { displayName: draft.name })
+      await updateProfile(user, { displayName: draft.name, photoURL: nextPhoto || undefined })
       setProfile(draft)
       setEditing(false)
     } catch (e) {
       console.error(e)
       alert("Failed to save profile")
     }
+  }
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPhotoFile(file)
+    const reader = new FileReader()
+    reader.onload = ev => setPhotoPreview(ev.target?.result as string)
+    reader.readAsDataURL(file)
   }
 
   const handleUpdatePassword = async () => {
@@ -215,9 +248,20 @@ export default function ProfilePage() {
     }
   }
 
-  const handleCreatePost = async (input: Parameters<typeof createPost>[4]) => {
+  const handleCreatePost = async (input: Parameters<typeof createPost>[4] & { imageFiles?: File[] }) => {
     if (!user || !studyverseId) return
-    const post = await createPost(user.uid, studyverseId, profile.name, user.photoURL || undefined, input)
+    let imageUrls: string[] | undefined
+    if (input.imageFiles?.length) {
+      const { uploadPostImages } = await import("@/backend/social/storage-upload")
+      imageUrls = await uploadPostImages(user.uid, input.imageFiles)
+    }
+    const post = await createPost(user.uid, studyverseId, profile.name, user.photoURL || undefined, {
+      category: input.category,
+      text: input.text,
+      imageUrls,
+      projectUrl: input.projectUrl,
+      leetcodeSlug: input.leetcodeSlug,
+    })
     setPosts(prev => [post, ...prev])
   }
 
@@ -283,11 +327,14 @@ export default function ProfilePage() {
     uid: user.uid,
     studyverseId,
     name: profile.name,
-    photoURL: user.photoURL || undefined,
+    photoURL: photoPreview || photoURL || user.photoURL || undefined,
     college: profile.college,
     bio: profile.bio,
     major: profile.major,
     year: profile.year,
+    instagram: profile.instagram || undefined,
+    linkedin: profile.linkedin || undefined,
+    isPrivate,
     followers,
     following,
     githubUsername,
@@ -416,6 +463,59 @@ export default function ProfilePage() {
           </div>
         ) : (
         <div className="max-w-3xl flex flex-col gap-4">
+          <Section title="Profile Photo" icon={Camera}>
+            <div className="flex items-center gap-4">
+              <div className="w-20 h-20 rounded-full border-2 border-white/10 overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 shrink-0">
+                {(photoPreview || photoURL) ? (
+                  <img src={photoPreview || photoURL} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white font-bold text-xl">
+                    {profile.name.slice(0, 2).toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <div>
+                <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+                <button
+                  type="button"
+                  onClick={() => photoInputRef.current?.click()}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold text-indigo-400 border border-indigo-500/20 bg-indigo-500/10 hover:bg-indigo-500/20"
+                >
+                  Change photo
+                </button>
+                <p className="text-xs text-gray-500 mt-2">JPG or PNG. Saved when you click Save.</p>
+              </div>
+            </div>
+          </Section>
+
+          <Section title="Privacy" icon={Lock}>
+            <label className="flex items-center justify-between gap-4 cursor-pointer">
+              <div>
+                <p className="text-sm font-semibold text-gray-200">Private account</p>
+                <p className="text-xs text-gray-500 mt-0.5">Only approved followers can see your posts and projects.</p>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  const next = !isPrivate
+                  setIsPrivate(next)
+                  if (user) {
+                    await updateDoc(doc(getClientDb(), "users", user.uid), { isPrivate: next })
+                  }
+                }}
+                className={cn(
+                  "w-12 h-7 rounded-full transition-colors relative shrink-0",
+                  isPrivate ? "bg-indigo-600" : "bg-white/10",
+                )}
+              >
+                <span className={cn(
+                  "absolute top-1 w-5 h-5 rounded-full bg-white transition-all",
+                  isPrivate ? "left-6" : "left-1",
+                )} />
+              </button>
+            </label>
+          </Section>
+
           <Section title="Personal Information" icon={UserIcon}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field label="Full Name" value={editing ? draft.name : profile.name} editing={editing} onChange={v => setDraft(d => ({ ...d, name: v }))} placeholder="Your full name" icon={UserIcon} />
@@ -429,6 +529,13 @@ export default function ProfilePage() {
                 ? <textarea value={draft.bio} onChange={e => setDraft(d => ({ ...d, bio: e.target.value }))} rows={3} maxLength={200} placeholder="Tell others about yourself..."
                     className="border border-white/10 bg-white/5 rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-gray-600 outline-none focus:ring-2 focus:ring-indigo-500/40 resize-none" />
                 : <p className="text-white text-sm leading-relaxed">{profile.bio || <span className="text-gray-600">No bio added.</span>}</p>}
+            </div>
+          </Section>
+
+          <Section title="Social Links" icon={Instagram}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Field label="Instagram" value={editing ? draft.instagram : profile.instagram} editing={editing} onChange={v => setDraft(d => ({ ...d, instagram: v }))} placeholder="@username" icon={Instagram} />
+              <Field label="LinkedIn" value={editing ? draft.linkedin : profile.linkedin} editing={editing} onChange={v => setDraft(d => ({ ...d, linkedin: v }))} placeholder="username or full URL" icon={Linkedin} />
             </div>
           </Section>
 
@@ -497,14 +604,37 @@ export default function ProfilePage() {
             />
           </Section>
 
-          <div className="bg-white/[0.03] border border-red-500/20 rounded-2xl p-5 flex items-center justify-between">
+          {blockedUsers.length > 0 && (
+            <Section title="Blocked Users" icon={Shield}>
+              <div className="flex flex-col gap-2">
+                {blockedUsers.map(uid => (
+                  <div key={uid} className="flex items-center justify-between py-2 border-b border-white/[0.06] last:border-0">
+                    <span className="text-xs text-gray-500 font-mono">{uid.slice(0, 12)}…</span>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!user) return
+                        await unblockUser(user.uid, uid)
+                        setBlockedUsers(prev => prev.filter(u => u !== uid))
+                      }}
+                      className="text-xs font-semibold text-indigo-400 hover:text-indigo-300"
+                    >
+                      Unblock
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          <div className="bg-white/[0.03] border border-red-500/20 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4 sm:justify-between">
             <div>
               <p className="text-sm font-semibold text-gray-200">Sign out of StudyVerse</p>
               <p className="text-xs text-gray-500 mt-0.5">You can always sign back in at any time.</p>
             </div>
             <button
               onClick={async () => { await signOut(getClientAuth()); router.push("/") }}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-red-400 border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 transition-all"
+              className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-red-400 border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 transition-all shrink-0 self-start sm:self-auto"
             >
               <LogOut size={14} /> Sign Out
             </button>

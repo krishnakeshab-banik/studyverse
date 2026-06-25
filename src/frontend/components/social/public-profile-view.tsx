@@ -7,6 +7,7 @@ import { PostCard } from "@/components/social/post-card"
 import { GitHubPanel } from "@/components/social/github-panel"
 import { LeetCodePanel } from "@/components/social/leetcode-panel"
 import { ProjectDetailModal } from "@/components/projects/project-feed"
+import { BlockUserDialog, ProfileMoreMenu } from "@/components/social/block-user-dialog"
 import { useAuth } from "@/context/AuthContext"
 import {
   fetchUserByStudyverseId, fetchProjectsByStudyverseId,
@@ -20,11 +21,12 @@ import {
 } from "@/backend/social/follow-requests"
 import { blockUser } from "@/backend/social/blocks"
 import { canMessage } from "@/backend/social/messages"
+import { canViewProfileContent } from "@/backend/social/privacy"
 import { doc, getDoc } from "firebase/firestore"
 import { getClientDb } from "@/backend/db/firebase"
 import { ensureStudyverseId } from "@/backend/social/user-id"
 import type { SVPost, SVProject, UserPublicProfile } from "@/backend/social/types"
-import { User, ArrowLeft, MessageSquare, Ban } from "lucide-react"
+import { User, ArrowLeft, MessageSquare, Lock } from "lucide-react"
 
 interface PublicProfileViewProps {
   studyverseId: string
@@ -54,6 +56,7 @@ export function PublicProfileView({ studyverseId }: PublicProfileViewProps) {
   const [canMsg, setCanMsg] = useState(false)
   const [myName, setMyName] = useState("You")
   const [myStudyverseId, setMyStudyverseId] = useState("")
+  const [showBlockDialog, setShowBlockDialog] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -65,12 +68,19 @@ export function PublicProfileView({ studyverseId }: PublicProfileViewProps) {
         return
       }
       setProfile(p)
-      const [userPosts, userProjects] = await Promise.all([
-        fetchPostsByStudyverseId(studyverseId),
-        fetchProjectsByStudyverseId(studyverseId),
-      ])
-      setPosts(userPosts)
-      setProjects(userProjects)
+
+      const canView = canViewProfileContent(p, user?.uid)
+      if (canView) {
+        const [userPosts, userProjects] = await Promise.all([
+          fetchPostsByStudyverseId(studyverseId),
+          fetchProjectsByStudyverseId(studyverseId),
+        ])
+        setPosts(userPosts)
+        setProjects(userProjects)
+      } else {
+        setPosts([])
+        setProjects([])
+      }
 
       if (user && user.uid !== p.uid) {
         const req = await getFollowRequest(user.uid, p.uid)
@@ -120,9 +130,10 @@ export function PublicProfileView({ studyverseId }: PublicProfileViewProps) {
 
   const isSelf = user?.uid === profile?.uid
   const isFollowing = profile ? (user ? profile.followers.includes(user.uid) : false) : false
+  const canView = profile ? canViewProfileContent(profile, user?.uid) : false
 
   const handleFollow = async () => {
-    if (!user || !profile) return alert("Sign in to follow")
+    if (!user || !profile) return router.push("/")
     if (profile.uid.startsWith("seed-")) return alert("Demo account")
     try {
       const result = await sendFollowRequest(
@@ -135,7 +146,6 @@ export function PublicProfileView({ studyverseId }: PublicProfileViewProps) {
         return
       }
       setIsPending(true)
-      alert("Follow request sent!")
     } catch (e) {
       console.error(e)
       alert("Failed to send follow request")
@@ -151,6 +161,7 @@ export function PublicProfileView({ studyverseId }: PublicProfileViewProps) {
         followers: prev.followers.filter(u => u !== user.uid),
       } : null)
       setIsPending(false)
+      load()
     } catch (e) {
       console.error(e)
       alert("Failed to unfollow")
@@ -169,15 +180,8 @@ export function PublicProfileView({ studyverseId }: PublicProfileViewProps) {
 
   const handleBlock = async () => {
     if (!user || !profile) return
-    if (!confirm(`Block ${profile.name}? They won't be able to message or follow you.`)) return
-    try {
-      await blockUser(user.uid, profile.uid)
-      alert("User blocked")
-      router.push("/browse")
-    } catch (e) {
-      console.error(e)
-      alert("Failed to block user")
-    }
+    await blockUser(user.uid, profile.uid)
+    router.push("/browse")
   }
 
   const handlePostLike = async (id: string) => {
@@ -194,7 +198,6 @@ export function PublicProfileView({ studyverseId }: PublicProfileViewProps) {
       await togglePostLike(id, user.uid)
     } catch (e) {
       console.error(e)
-      alert("Failed to update like")
       load()
     }
   }
@@ -227,7 +230,6 @@ export function PublicProfileView({ studyverseId }: PublicProfileViewProps) {
       await toggleLike(id, user.uid)
     } catch (e) {
       console.error(e)
-      alert("Failed to update like")
     }
     if (activeProject?.id === id) {
       setActiveProject(prev => prev ? {
@@ -252,7 +254,6 @@ export function PublicProfileView({ studyverseId }: PublicProfileViewProps) {
       await toggleStar(id, user.uid)
     } catch (e) {
       console.error(e)
-      alert("Failed to update star")
     }
     if (activeProject?.id === id) {
       setActiveProject(prev => prev ? {
@@ -284,7 +285,7 @@ export function PublicProfileView({ studyverseId }: PublicProfileViewProps) {
         <User size={40} className="text-gray-700 mx-auto mb-3" />
         <p className="text-gray-400 font-semibold">User not found</p>
         <button onClick={() => router.push("/browse")} className="text-indigo-400 text-sm mt-2 hover:text-indigo-300">
-          Browse feed →
+          Explore feed →
         </button>
       </div>
     )
@@ -298,98 +299,104 @@ export function PublicProfileView({ studyverseId }: PublicProfileViewProps) {
 
       <ProfileStatsHeader
         profile={profile}
-        postCount={posts.length}
-        projectCount={projects.length}
-        repoCount={profile.githubStats?.publicRepos}
+        postCount={canView ? posts.length : 0}
+        projectCount={canView ? projects.length : 0}
+        repoCount={canView ? profile.githubStats?.publicRepos : undefined}
         isFollowing={isFollowing}
         isPending={isPending}
         isSelf={isSelf}
+        signedIn={!!user}
         onFollow={handleFollow}
         onUnfollow={handleUnfollow}
         onCancelRequest={handleCancelRequest}
+        onSignInRequired={() => router.push("/")}
         onCopyId={copyUserId}
         copied={copiedId}
         action={
-          <div className="flex items-center gap-2">
-            {isSelf ? (
-              <button
-                onClick={() => router.push("/profile")}
-                className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-300 border border-white/10 bg-white/5 hover:bg-white/10"
-              >
-                Edit profile
-              </button>
-            ) : (
-              <>
-                {canMsg && (
-                  <button
-                    onClick={() => router.push(`/messages?uid=${profile.uid}`)}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-indigo-400 border border-indigo-500/20 bg-indigo-500/10 hover:bg-indigo-500/20"
-                  >
-                    <MessageSquare size={14} /> Message
-                  </button>
-                )}
+          !isSelf ? (
+            <div className="flex items-center gap-2">
+              {canMsg && (
                 <button
-                  onClick={handleBlock}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold text-red-400 border border-red-500/20 bg-red-500/10 hover:bg-red-500/20"
-                  title="Block user"
+                  onClick={() => router.push(`/messages?uid=${profile.uid}`)}
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-indigo-400 border border-indigo-500/20 bg-indigo-500/10 hover:bg-indigo-500/20"
                 >
-                  <Ban size={14} />
+                  <MessageSquare size={14} /> Message
                 </button>
-              </>
-            )}
-          </div>
+              )}
+              <ProfileMoreMenu onBlock={() => setShowBlockDialog(true)} />
+            </div>
+          ) : (
+            <button
+              onClick={() => router.push("/profile#settings")}
+              className="px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-300 border border-white/10 bg-white/5 hover:bg-white/10"
+            >
+              Edit profile
+            </button>
+          )
         }
       />
 
-      <ProfileTabs active={tab} onChange={handleTabChange} />
+      {!canView && !isSelf && (
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-8 text-center mb-6">
+          <Lock size={32} className="text-gray-600 mx-auto mb-3" />
+          <p className="text-white font-semibold mb-1">This account is private</p>
+          <p className="text-gray-500 text-sm">Follow this account to see their posts and projects.</p>
+        </div>
+      )}
 
-      <div id="profile-tab-panel" role="tabpanel" className="min-h-[200px]">
-      {tab === "posts" && (
-        posts.length === 0 ? (
-          <div className="py-12 text-center text-gray-500 text-sm">No posts yet.</div>
-        ) : (
-          <div className="flex flex-col gap-3 max-w-2xl">
-            {posts.map(p => (
-              <PostCard
-                key={p.id}
-                post={p}
-                currentUid={user?.uid}
-                onLike={handlePostLike}
-                onComment={handlePostComment}
-              />
-            ))}
+      {canView && (
+        <>
+          <ProfileTabs active={tab} onChange={handleTabChange} />
+
+          <div id="profile-tab-panel" role="tabpanel" className="min-h-[200px]">
+          {tab === "posts" && (
+            posts.length === 0 ? (
+              <div className="py-12 text-center text-gray-500 text-sm">No posts yet.</div>
+            ) : (
+              <div className="flex flex-col gap-3 max-w-2xl">
+                {posts.map(p => (
+                  <PostCard
+                    key={p.id}
+                    post={p}
+                    currentUid={user?.uid}
+                    onLike={handlePostLike}
+                    onComment={handlePostComment}
+                  />
+                ))}
+              </div>
+            )
+          )}
+
+          {tab === "projects" && (
+            projects.length === 0 ? (
+              <div className="py-12 text-center text-gray-500 text-sm">No projects shared yet.</div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 max-w-3xl">
+                {projects.map(p => (
+                  <ProjectGridItem key={p.id} project={p} onOpen={() => setActiveProject(p)} />
+                ))}
+              </div>
+            )
+          )}
+
+          {tab === "github" && (
+            <GitHubPanel
+              githubUsername={profile.githubUsername}
+              githubStats={profile.githubStats}
+              githubSyncedAt={profile.githubSyncedAt}
+            />
+          )}
+
+          {tab === "leetcode" && (
+            <LeetCodePanel
+              leetcodeUsername={profile.leetcodeUsername}
+              leetcodeStats={profile.leetcodeStats}
+              leetcodeSyncedAt={profile.leetcodeSyncedAt}
+            />
+          )}
           </div>
-        )
+        </>
       )}
-
-      {tab === "projects" && (
-        projects.length === 0 ? (
-          <div className="py-12 text-center text-gray-500 text-sm">No projects shared yet.</div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 max-w-3xl">
-            {projects.map(p => (
-              <ProjectGridItem key={p.id} project={p} onOpen={() => setActiveProject(p)} />
-            ))}
-          </div>
-        )
-      )}
-
-      {tab === "github" && (
-        <GitHubPanel
-          githubUsername={profile.githubUsername}
-          githubStats={profile.githubStats}
-          githubSyncedAt={profile.githubSyncedAt}
-        />
-      )}
-
-      {tab === "leetcode" && (
-        <LeetCodePanel
-          leetcodeUsername={profile.leetcodeUsername}
-          leetcodeStats={profile.leetcodeStats}
-          leetcodeSyncedAt={profile.leetcodeSyncedAt}
-        />
-      )}
-      </div>
 
       {activeProject && (
         <ProjectDetailModal
@@ -402,6 +409,13 @@ export function PublicProfileView({ studyverseId }: PublicProfileViewProps) {
           onViewProfile={() => router.push(`/profile/${profile.studyverseId}`)}
         />
       )}
+
+      <BlockUserDialog
+        userName={profile.name}
+        open={showBlockDialog}
+        onClose={() => setShowBlockDialog(false)}
+        onConfirm={handleBlock}
+      />
     </>
   )
 }

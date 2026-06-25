@@ -20,17 +20,17 @@ interface NavBarProps {
 
 export function NavBar({ items, className }: NavBarProps) {
   const pathname = usePathname()
-  const activeItem = items.find(i => pathname.startsWith(i.url)) ?? items[0]
-  const [activeTab, setActiveTab] = useState(activeItem.name)
+  const activeItem = items.find(i => pathname.startsWith(i.url))
+  const [activeTab, setActiveTab] = useState(activeItem?.name ?? "")
 
   useEffect(() => {
     const match = items.find(i => pathname.startsWith(i.url))
-    if (match) setActiveTab(match.name)
+    setActiveTab(match?.name ?? "")
   }, [pathname, items])
 
   return (
-    <div className={cn("fixed bottom-0 sm:top-0 left-1/2 -translate-x-1/2 z-50 mb-6 sm:pt-6", className)}>
-      <div className="flex items-center gap-1 bg-black/40 border border-white/10 backdrop-blur-xl py-1 px-1 rounded-full shadow-2xl shadow-black/50">
+    <div className={cn("fixed bottom-0 sm:top-0 left-1/2 -translate-x-1/2 z-50 mb-6 sm:pt-6 w-full sm:w-auto sm:max-w-[calc(100vw-7rem)] px-3 sm:px-0 pointer-events-none", className)}>
+      <div className="flex items-center gap-0.5 sm:gap-1 bg-black/40 border border-white/10 backdrop-blur-xl py-1 px-1 rounded-full shadow-2xl shadow-black/50 overflow-x-auto scrollbar-thin pointer-events-auto mx-auto w-max max-w-full">
         {items.map((item) => {
           const Icon = item.icon
           const isActive = activeTab === item.name
@@ -40,12 +40,12 @@ export function NavBar({ items, className }: NavBarProps) {
               href={item.url}
               onClick={() => setActiveTab(item.name)}
               className={cn(
-                "relative cursor-pointer text-xs font-semibold px-4 py-2 rounded-full transition-colors duration-200",
+                "relative cursor-pointer text-xs font-semibold px-3 lg:px-4 py-2 rounded-full transition-colors duration-200 shrink-0",
                 isActive ? "text-white" : "text-white/50 hover:text-white/80",
               )}
             >
-              <span className="hidden md:inline">{item.name}</span>
-              <span className="md:hidden">
+              <span className="hidden lg:inline">{item.name}</span>
+              <span className="lg:hidden">
                 <Icon size={18} strokeWidth={2.5} />
               </span>
               {isActive && (

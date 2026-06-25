@@ -293,11 +293,11 @@ export default function CalendarPage() {
       return (
         <button key={dayNum} onClick={() => handleDayClick(dayStr)}
           className={cn(
-            "h-24 p-3 rounded-2xl flex flex-col items-start transition-all relative overflow-hidden group border",
+            "h-14 sm:h-20 lg:h-24 p-1.5 sm:p-2 lg:p-3 rounded-xl sm:rounded-2xl flex flex-col items-start transition-all relative overflow-hidden group border min-w-0",
             isSelected ? "border-indigo-500 bg-indigo-500/10" : "border-white/5 bg-white/[0.02] hover:bg-white/[0.05]",
             isToday && !isSelected && "border-white/20"
           )}>
-          <span className={cn("text-sm font-semibold mb-1 w-7 h-7 flex items-center justify-center rounded-full",
+          <span className={cn("text-xs sm:text-sm font-semibold mb-0.5 sm:mb-1 w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-full",
              isToday ? "bg-white text-black" : isSelected ? "text-indigo-400" : "text-gray-400"
           )}>{dayNum}</span>
           
@@ -342,8 +342,8 @@ export default function CalendarPage() {
               {/* Left Side: Calendar Grid */}
               <div className="flex-[2] flex flex-col min-w-0">
                  {/* Calendar Header */}
-                 <div className="flex items-center justify-between mb-6 bg-white/[0.03] border border-white/10 p-3 rounded-2xl">
-                    <h2 className="text-xl font-bold text-white px-3 tracking-wide">{MONTHS[month]} <span className="text-gray-500 font-medium ml-1">{year}</span></h2>
+                 <div className="flex items-center justify-between mb-4 sm:mb-6 bg-white/[0.03] border border-white/10 p-2 sm:p-3 rounded-2xl gap-2">
+                    <h2 className="text-base sm:text-xl font-bold text-white px-1 sm:px-3 tracking-wide truncate">{MONTHS[month]} <span className="text-gray-500 font-medium ml-1">{year}</span></h2>
                     <div className="flex items-center gap-2">
                        <button onClick={prevMonth} className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
                          <ChevronLeft size={18} className="text-gray-300" />
@@ -355,14 +355,14 @@ export default function CalendarPage() {
                  </div>
 
                  {/* Days Header */}
-                 <div className="grid grid-cols-7 gap-3 mb-3">
+                 <div className="grid grid-cols-7 gap-1 sm:gap-2 lg:gap-3 mb-2 sm:mb-3">
                    {DAYS.map(d => (
-                     <div key={d} className="text-center text-xs font-semibold text-gray-500 uppercase tracking-widest">{d}</div>
+                     <div key={d} className="text-center text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider sm:tracking-widest truncate">{d.slice(0, 3)}</div>
                    ))}
                  </div>
 
                  {/* Calendar Days */}
-                 <div className="grid grid-cols-7 gap-3 pb-8">
+                 <div className="grid grid-cols-7 gap-1 sm:gap-2 lg:gap-3 pb-8">
                    {renderCalendarDays()}
                  </div>
               </div>

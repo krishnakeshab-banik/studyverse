@@ -220,7 +220,7 @@ export default function DoubtsPage() {
                     <button onClick={() => setShowForm(false)} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-8 self-start text-sm font-bold">
                        <ArrowLeft size={16} /> Back to Doubts
                     </button>
-                    <div className="bg-[#080808] border border-white/10 rounded-3xl p-8 shadow-2xl">
+                    <div className="bg-[#080808] border border-white/10 rounded-3xl p-4 sm:p-8 shadow-2xl">
                        <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><Plus className="text-indigo-400" /> Post a New Doubt</h2>
                        
                        <div className="flex flex-col gap-5">
@@ -230,7 +230,7 @@ export default function DoubtsPage() {
                               className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-gray-600 outline-none focus:border-indigo-500/50" />
                           </div>
                           
-                          <div className="flex gap-5">
+                          <div className="flex flex-col sm:flex-row gap-5">
                              <div className="flex-1">
                                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 block">Subject</label>
                                <select value={fSubj} onChange={e => setFSubj(e.target.value)} className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-3 text-white outline-none cursor-pointer">

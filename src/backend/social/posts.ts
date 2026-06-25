@@ -15,6 +15,7 @@ function parsePost(id: string, data: Record<string, unknown>): SVPost {
     authorPhoto: data.authorPhoto as string | undefined,
     category: (data.category as PostCategory) || "general",
     text: (data.text as string) || "",
+    imageUrls: (data.imageUrls as string[]) || undefined,
     projectUrl: data.projectUrl as string | undefined,
     leetcodeSlug: data.leetcodeSlug as string | undefined,
     likes: (data.likes as number) || 0,
@@ -32,6 +33,7 @@ export async function createPost(
   input: {
     category: PostCategory
     text: string
+    imageUrls?: string[]
     projectUrl?: string
     leetcodeSlug?: string
   },
@@ -45,6 +47,7 @@ export async function createPost(
     authorPhoto,
     category: input.category,
     text: input.text.trim(),
+    imageUrls: input.imageUrls?.length ? input.imageUrls : undefined,
     projectUrl: input.projectUrl?.trim() || undefined,
     leetcodeSlug: input.leetcodeSlug?.trim() || undefined,
     likes: 0,

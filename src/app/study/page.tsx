@@ -457,7 +457,7 @@ export default function VirtualStudyPage() {
 
                 {/* Right: Tools Panel */}
                 <div className="flex-1 flex flex-col bg-[#0e0e0e] rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
-                  <div className="flex bg-[#0a0a0a] border-b border-white/[0.06] shrink-0 p-1">
+                  <div className="flex bg-[#0a0a0a] border-b border-white/[0.06] shrink-0 p-1 overflow-x-auto scrollbar-thin">
                     {[
                       { id: "summary", icon: FileText, label: "Summary" },
                       { id: "notes", icon: Highlighter, label: "Jot Down" },
@@ -465,10 +465,10 @@ export default function VirtualStudyPage() {
                       { id: "ai", icon: Sparkles, label: "AI Assist" },
                     ].map(t => (
                       <button key={t.id} onClick={() => setTab(t.id as any)}
-                        className={cn("flex-1 flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl transition-all",
+                        className={cn("flex-1 min-w-[4.5rem] flex flex-col items-center justify-center gap-1 sm:gap-1.5 py-2.5 sm:py-3 rounded-xl transition-all shrink-0",
                           tab === t.id ? "bg-white/10 text-white shadow-sm" : "text-gray-500 hover:text-gray-300 hover:bg-white/5")}>
                         <t.icon size={16} className={tab === t.id ? (t.id === "ai" ? "text-violet-400" : "text-indigo-400") : ""} />
-                        <span className="text-[10px] font-semibold">{t.label}</span>
+                        <span className="text-[9px] sm:text-[10px] font-semibold">{t.label}</span>
                       </button>
                     ))}
                   </div>

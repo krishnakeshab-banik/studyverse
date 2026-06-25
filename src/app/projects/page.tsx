@@ -6,6 +6,7 @@ import { AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { PageShell, StatCard } from "@/components/ui/page-shell"
 import { ProjectFeedCard, ProjectDetailModal } from "@/components/projects/project-feed"
+import { ProjectMatcher } from "@/components/projects/project-matcher"
 import { useAuth } from "@/context/AuthContext"
 import { doc, getDoc } from "firebase/firestore"
 import { getClientDb } from "@/backend/db/firebase"
@@ -244,6 +245,10 @@ export default function ProjectsPage() {
     >
       {searchError && (
         <p className="text-red-400 text-sm mb-4 font-medium">{searchError}</p>
+      )}
+
+      {!showForm && !loading && !authLoading && (
+        <ProjectMatcher projects={projects} onOpenProject={setActiveProject} />
       )}
 
       {showForm ? (

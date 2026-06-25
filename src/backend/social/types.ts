@@ -90,6 +90,7 @@ export interface SVPost {
   authorPhoto?: string
   category: PostCategory
   text: string
+  imageUrls?: string[]
   projectUrl?: string
   leetcodeSlug?: string
   likes: number
@@ -169,6 +170,9 @@ export interface UserPublicProfile {
   bio?: string
   major?: string
   year?: string
+  instagram?: string
+  linkedin?: string
+  isPrivate?: boolean
   followers: string[]
   following: string[]
   githubUsername?: string
@@ -177,4 +181,10 @@ export interface UserPublicProfile {
   leetcodeUsername?: string
   leetcodeStats?: LeetCodeStats
   leetcodeSyncedAt?: number
+}
+
+export interface ProjectMatchResult {
+  project: SVProject
+  score: number
+  matchedTerms: string[]
 }

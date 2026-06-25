@@ -98,6 +98,30 @@ export async function fetchProjectsByStudyverseId(studyverseId: string): Promise
   return snap.docs.map(d => parseProject(d.id, d.data())).sort((a, b) => b.timestamp - a.timestamp)
 }
 
+function mapUserProfile(uid: string, d: Record<string, unknown>, normalized: string): UserPublicProfile {
+  return {
+    uid,
+    studyverseId: (d.studyverseId as string) || normalized,
+    name: (d.name as string) || "User",
+    photoURL: d.photoURL as string | undefined,
+    college: d.college as string | undefined,
+    bio: d.bio as string | undefined,
+    major: d.major as string | undefined,
+    year: d.year as string | undefined,
+    instagram: d.instagram as string | undefined,
+    linkedin: d.linkedin as string | undefined,
+    isPrivate: !!(d.isPrivate),
+    followers: (d.followers as string[]) || [],
+    following: (d.following as string[]) || [],
+    githubUsername: d.githubUsername as string | undefined,
+    githubStats: d.githubStats as UserPublicProfile["githubStats"],
+    githubSyncedAt: d.githubSyncedAt as number | undefined,
+    leetcodeUsername: d.leetcodeUsername as string | undefined,
+    leetcodeStats: d.leetcodeStats as UserPublicProfile["leetcodeStats"],
+    leetcodeSyncedAt: d.leetcodeSyncedAt as number | undefined,
+  }
+}
+
 export async function fetchUserByStudyverseId(studyverseId: string): Promise<UserPublicProfile | null> {
   const normalized = studyverseId.trim().toUpperCase()
   if (!normalized.startsWith("U-")) return null
@@ -107,25 +131,7 @@ export async function fetchUserByStudyverseId(studyverseId: string): Promise<Use
     const uid = indexSnap.data().uid as string
     const userSnap = await getDoc(doc(getClientDb(), "users", uid))
     if (userSnap.exists()) {
-      const d = userSnap.data()
-      return {
-        uid,
-        studyverseId: (d.studyverseId as string) || normalized,
-        name: (d.name as string) || "User",
-        photoURL: d.photoURL as string | undefined,
-        college: d.college as string | undefined,
-        bio: d.bio as string | undefined,
-        major: d.major as string | undefined,
-        year: d.year as string | undefined,
-        followers: (d.followers as string[]) || [],
-        following: (d.following as string[]) || [],
-        githubUsername: d.githubUsername as string | undefined,
-        githubStats: d.githubStats as UserPublicProfile["githubStats"],
-        githubSyncedAt: d.githubSyncedAt as number | undefined,
-        leetcodeUsername: d.leetcodeUsername as string | undefined,
-        leetcodeStats: d.leetcodeStats as UserPublicProfile["leetcodeStats"],
-        leetcodeSyncedAt: d.leetcodeSyncedAt as number | undefined,
-      }
+      return mapUserProfile(uid, userSnap.data(), normalized)
     }
   }
 

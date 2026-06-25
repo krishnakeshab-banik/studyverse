@@ -3,7 +3,7 @@
 import React, { useRef } from "react"
 import { motion, useInView } from "framer-motion"
 import {
-  BookOpen, Brain, ShoppingBag, CalendarDays, MessageSquare, FolderGit2,
+  BookOpen, Brain, CalendarDays, MessageSquare, FolderGit2, Compass,
   ChevronRight, Users, Zap, Shield, Sparkles, ArrowUpRight,
 } from "lucide-react"
 
@@ -27,10 +27,10 @@ const features = [
     large: false,
   },
   {
-    icon: ShoppingBag,
-    title: "Marketplace",
-    tag: "Discover",
-    description: "Curated study packs from peers. Filter by subject or rating.",
+    icon: Compass,
+    title: "Browse Creators",
+    tag: "Connect",
+    description: "Discover classmates, follow peers, and explore public profiles.",
     color: "#06b6d4",
     span: "",
     large: false,
@@ -73,7 +73,7 @@ const pillars = [
 const stats = [
   { value: "50K+", label: "Students" },
   { value: "200K+", label: "Resources" },
-  { value: "6", label: "Tools" },
+  { value: "5", label: "Tools" },
   { value: "24/7", label: "AI help" },
 ]
 
@@ -196,7 +196,7 @@ const InteractiveSelector = () => {
           </h2>
 
           <p className="text-white/40 text-sm sm:text-base max-w-lg mx-auto leading-relaxed">
-            One platform that replaces six apps — built for students who want real results, not more noise.
+            One platform that replaces five apps — built for students who want real results, not more noise.
           </p>
         </motion.div>
 

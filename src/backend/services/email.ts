@@ -1,7 +1,12 @@
 import { Resend } from "resend";
 
-// Initialize Resend with the API key from environment variables
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResend() {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey || apiKey === "your_resend_api_key_here") {
+    throw new Error("Missing or invalid RESEND_API_KEY in environment variables.");
+  }
+  return new Resend(apiKey);
+}
 
 /**
  * Sends a test email to the specified recipient.
@@ -15,7 +20,7 @@ export async function sendTestEmail(to?: string) {
   }
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: "StudyVerse <onboarding@resend.dev>",
       to: [recipient],
       subject: "StudyVerse Test Email",
@@ -75,7 +80,7 @@ export async function sendReminderEmail({
   }
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: "StudyVerse Reminders <onboarding@resend.dev>",
       to: [recipient],
       subject: `Reminder: ${subject} Study Session`,

@@ -70,6 +70,21 @@ export function PostCard({ post, currentUid, onLike, onComment, onViewProfile }:
             </span>
           </div>
           <p className="text-gray-200 text-sm mt-2 leading-relaxed whitespace-pre-wrap break-words">{post.text}</p>
+          {post.imageUrls && post.imageUrls.length > 0 && (
+            <div className={cn(
+              "mt-3 grid gap-1 rounded-xl overflow-hidden border border-white/[0.08]",
+              post.imageUrls.length === 1 ? "grid-cols-1" : "grid-cols-2",
+            )}>
+              {post.imageUrls.map((url, i) => (
+                <a key={url} href={url} target="_blank" rel="noopener noreferrer" className={cn(
+                  "block bg-black/40 overflow-hidden",
+                  post.imageUrls!.length === 3 && i === 0 ? "row-span-2" : "",
+                )}>
+                  <img src={url} alt="" className="w-full h-full max-h-80 object-cover hover:opacity-95 transition-opacity" />
+                </a>
+              ))}
+            </div>
+          )}
           {post.projectUrl && (
             <a href={post.projectUrl} target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-emerald-400 hover:text-emerald-300">

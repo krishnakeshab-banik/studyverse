@@ -517,7 +517,7 @@ export default function LibraryPage() {
     <div className="min-h-screen w-full bg-[#080808]">
       <AppNav />
       <main className="pt-24 pb-24 md:pb-10">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 sm:pr-24">
 
           {!selected ? (
             <>
@@ -529,7 +529,7 @@ export default function LibraryPage() {
                     <LibraryIcon size={22} className="text-indigo-400" />
                   </div>
                   <div>
-                    <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                    <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
                       My Library
                     </h1>
                     <p className="text-gray-500 text-sm mt-0.5">Your personal collection of study resources</p>
@@ -565,7 +565,7 @@ export default function LibraryPage() {
                   )}
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-thin">
                   {/* Type filter */}
                   <select value={typeFilter} onChange={e => setTypeFilter(e.target.value as "all" | ResourceType)}
                     className="bg-white/[0.04] border border-white/10 rounded-xl px-3 h-11 text-sm text-gray-300 outline-none focus:ring-2 focus:ring-indigo-500/30 cursor-pointer">
